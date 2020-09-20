@@ -8,3 +8,8 @@ This project is a first attempt at creating an analytical tool for decision-maki
 - Exploratory Analysis
 - Predictive Analysis 
 - Optimal Decision-Making 
+
+## Exploratory Analysis
+- Generate and explor features that are correlated with fantasy score 
+- Generate a weekly predictive model of score for each postion. Let's do a combined model for QB, RB, WR 
+  
