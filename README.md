@@ -8,3 +8,7 @@ This project is a first attempt at creating an analytical tool for decision-maki
 - Exploratory Analysis
 - Predictive Analysis 
 - Optimal Decision-Making 
+
+## Data Source 
+https://fantasydata.com/nfl/fantasy-football-leaders
+
