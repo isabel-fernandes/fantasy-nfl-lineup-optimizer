@@ -6,7 +6,7 @@ import os
 dir_in = "../raw_data/weekly/"
 
 dir_out = "../data/"
-file_out = "weekly.P" 
+file_out = "sample_weekly.csv"
 
 # Define Functions
 def import_week(filepath):
@@ -46,7 +46,7 @@ def import_all_seasons(dir_in):
     return df_all
 
 def export_data(filepath):
-    df.to_pickle(filepath)
+    df.to_csv(filepath, index=False)
 
     return
 
