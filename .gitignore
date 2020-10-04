@@ -6,3 +6,6 @@ raw_data/*
 
 # Environment
 env/*
+
+# ipynb checkpoints
+~/.pynb_checkpoints/* 
