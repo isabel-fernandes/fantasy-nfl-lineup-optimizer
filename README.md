@@ -13,7 +13,11 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 ## Data Scraper 
 
 ### Sources
-https://fantasydata.com/nfl/fantasy-football-leaders
+- https://fantasydata.com/nfl/fantasy-football-leaders
+- http://rotoguru1.com/cgi-bin/fyday.pl
+
+## FanDuel Salaries
+Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) 
 
 ### Weekly Player Stat Requirements 
 If a stat (such as passing stats) is not applicable to a particular player, then the value will be 0, not empty. <br>
