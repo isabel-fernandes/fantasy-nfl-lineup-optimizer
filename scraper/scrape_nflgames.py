@@ -6,6 +6,7 @@ import pickle
 
 CURR_WEEK = 14
 YEARS = [2013,2014,2015]
+#YEARS = [2015]
 dir_out = "../data/"
 
 
@@ -51,8 +52,22 @@ def get_week(players, week):
             info.update(p.player._asdict())
         except AttributeError:
             pass
-        info['team'] = p.team
-        info['name'] = p.name
+        
+        try: 
+            info['team'] = p.team
+            info['full_name'] = p.player.full_name
+            info['birthdate'] = p.player.birthdate
+            info['years_pro'] = p.player.years_pro
+            info['height'] = p.player.height
+            info['weight'] = p.player.weight
+            info['position'] = p.player.position
+            info['profile_url'] = p.player.profile_url
+            info['last_name'] = p.player.last_name
+            info['number'] = p.player.number
+        except AttributeError:  
+            print("    {} player data not available. Skipping...".format(p.name)) 
+            continue 
+
         playerstats[p.playerid] = info
     return pd.DataFrame(playerstats).T.reset_index().rename(columns={"index":"id"})
 
@@ -113,8 +128,8 @@ for year in YEARS:
     opp_stats = get_opponent_stats(TEAMS, year)
     opp_stats = opp_stats.add_prefix("opp_")
     print("Saving to File "+str(year))
-    opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv")
-    player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv")
+    opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
+    player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
 
     TEAMS_2016 = [team[0] for team in nflgame.teams]
 #TEAMS_2016.remove('JAC')
@@ -131,8 +146,8 @@ player_stats = get_year(year, weeks).fillna(0)
 print("Creating Opponents Stats "+str(year))
 opp_stats = get_opponent_stats(TEAMS_2016, year)
 opp_stats = opp_stats.add_prefix("opp_")
-opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv")
-player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv")
+opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
+player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
 
 TEAMS_2017 = [team[0] for team in nflgame.teams]
 #TEAMS_2017.remove('JAC')
@@ -148,5 +163,5 @@ player_stats = get_year(year, weeks).fillna(0)
 print("Creating Opponents Stats "+str(year))
 opp_stats = get_opponent_stats(TEAMS_2017, year)
 opp_stats = opp_stats.add_prefix("opp_")
-opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv")
-player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv")
+opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
+player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
