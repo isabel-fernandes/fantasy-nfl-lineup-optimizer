@@ -1,2 +1,5 @@
 # Large Data Files
 raw_data/*
+
+# Desktop Service Store
+.DS_Store
