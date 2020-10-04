@@ -4,7 +4,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 CURR_WEEK = 18
-YEARS = [2017, 2018, 2019]
+YEARS = [2013,2014,2015,2016]
 PATH = "../data/fanduel_salaries/"
 root_url = "http://rotoguru1.com/cgi-bin/fyday.pl?week={}&year={}&game={}&scsv=1"
 urls_by_service = {}
