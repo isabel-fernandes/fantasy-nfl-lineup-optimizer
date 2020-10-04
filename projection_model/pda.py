@@ -69,3 +69,14 @@ new_opp_cols = ['offense', 'defense', 'opp_first_downs', 'opp_points',
 for year, df in opp_dfs.items():
     df.columns = new_opp_cols
     opp_dfs[year] = df
+
+# Clean data and create target variable
+data = pd.concat(player_dfs.values())
+missing_positions = data[data.isnull()]
+means = missing_positions.groupby(['id','full_name'], as_index=False).mean()
+means = means[['id','full_name','passing_att', 'rushing_att', 'receiving_rec']]
+means.columns = ['id','full_name','QB','RB','WRTE']
+means = means[(means.QB != 0) | (means.RB != 0) | (means.WRTE != 0)]
+means['position_fill'] = means[['QB','RB','WRTE']].idxmax(axis=1)
+means = means[['id','position_fill']]
+means['position_fill'] = means['position_fill'].apply(lambda x: np.nan if x == 'WRTE' else x)
