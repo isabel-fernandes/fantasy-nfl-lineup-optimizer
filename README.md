@@ -10,9 +10,42 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 - Lineup Optimizer
 - Display Dashboard
 
+## Data Scraper 
+
+### Sources
+https://fantasydata.com/nfl/fantasy-football-leaders
+
+### Weekly Player Stat Requirements 
+If a stat (such as passing stats) is not applicable to a particular player, then the value will be 0, not empty. <br>
+Sample: `data/sample_weekly.csv` 
+- Note that this sample csv does not exacly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual web-scraper outputs. 
+
+#### Variable Definitions
+| Parameter             | Descriptionn                  | Data Type | Notes              |
+|-----------------------|-------------------------------|-----------|--------------------|
+| Name                  | First and Last name of player | String    | "Patrick Mahomes"  |
+| Team                  | Team abbreviation             | String    | GB, CAR, NYG, ...  |
+| Pos                   | Position of Player            | String    | QB, RB, WR, TE     |
+| Wk                    | Week of season                | Int       | 1-17               | 
+| Opp                   | Opponent team's abbreviation  | String    | GB, CAR, NYG, ...  |
+| Year                  | Starting year of the season   | Int       |                    |
+| PassingYds            | Passing yards                 | Int       |                    |
+| PassingTD             | Passing touchdowns            | Int       |                    |
+| Int                   | Interceptions                 | Int       |                    |
+| PassingAtt            | Passing Attempts              | Int       |                    |
+| Cmp                   | Completions                   | Int       |                    |
+| RushingAtt            | Rushing attempts              | Int       |                    |
+| RushingYds            | Rushing yards                 | Int       |                    |
+| RushingTD             | Rushing touchdowns            | Int       |                    |
+| Rec                   | Receptions                    | Int       |                    |
+| Tgt                   | Targets                       | Int       |                    |
+| ReceivingYds          | Receiving yards               | Int       |                    |
+| ReceivingTD           | Receiving touchdowns          | Int       |                    |
+| FL                    | Fumbles                       | Int       |                    |
+
 ## Exploratory Analysis
 - Generate and explore features that are correlated with fantasy score
 - Generate a weekly predictive model of score for each postion. Let's do a combined model for QB, RB, WR 
 
-## Data Source
-https://fantasydata.com/nfl/fantasy-football-leaders
+
+
