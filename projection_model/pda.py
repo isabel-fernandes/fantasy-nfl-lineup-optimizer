@@ -17,12 +17,6 @@ dir_in = "../data/"
 files = os.listdir(dir_in)
 
 
-
-#player_stats_files = sorted([(int(re.sub('[^0-9]', '', f)), dir_in + f)
-#                             for f in files if "player" in f], key=lambda x: x[0])
-#opp_stats_files = sorted([(int(re.sub('[^0-9]', '', f)), dir_in + f)
-#                          for f in files if "opp" in f], key=lambda x: x[0])
-
 class WeeklyStats:
     def __init__(self, filepath):
         self.fpath = filepath
@@ -36,6 +30,7 @@ class WeeklyStats:
         if "position_fill" in df:
             del df['position_fill']
         df['year'] = self.year
+        df = df.rename(columns={"name": "full_name"}) 
         return df
 
     def read_opp_data(self):

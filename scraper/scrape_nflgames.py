@@ -52,6 +52,7 @@ def get_week(players, week):
         except AttributeError:
             pass
         info['team'] = p.team
+        info['name'] = p.name
         playerstats[p.playerid] = info
     return pd.DataFrame(playerstats).T.reset_index().rename(columns={"index":"id"})
 
