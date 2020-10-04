@@ -16,8 +16,22 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 - https://fantasydata.com/nfl/fantasy-football-leaders
 - http://rotoguru1.com/cgi-bin/fyday.pl
 
-## FanDuel Salaries
-Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) 
+### FanDuel Salaries
+Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) <br> 
+Sample: `data/fan duel/fd_salaries.csv` 
+- Note that this sample csv does not exactly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual webscraper outputs. 
+
+#### Variable Definitions
+| Parameter             | Descriptionn                  | Data Type | Notes              |
+|-----------------------|-------------------------------|-----------|--------------------|
+| Week                  | Week of season.               | Int       | 1-17               |
+| Year                  | Starting year of the season   | Int       |                    |
+| Name                  | First and Last name of player | String    | "Patrick Mahomes"  |
+| Team                  | Team abbreviation             | String    | GB, CAR, NYG, ...  |
+| Pos                   | Position of Player            | String    | QB, RB, WR, TE     |
+| Opp                   | Opponent team's abbreviation  | String    | GB, CAR, NYG, ...  |
+| fd_points             | FanDuel points scored         | Float     |                    |
+| fg_salary             | FanDuel salary                | Int       |                    |
 
 ### Weekly Player Stat Requirements 
 If a stat (such as passing stats) is not applicable to a particular player, then the value will be 0, not empty. <br>
