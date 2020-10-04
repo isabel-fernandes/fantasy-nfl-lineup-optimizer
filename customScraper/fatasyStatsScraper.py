@@ -1,10 +1,14 @@
 import requests
-import json
-from bs4 import BeautifulSoup
+import csv
 
+# variables that control the date
 startingWeek = 4
 year = 2020
 
+# List of dictionaries that will be turned into a csv
+mainPlayerDataList = []
+
+# requests made to get data
 cookies = {
     '_ga': 'GA1.2.1311463715.1601832784',
     '_gid': 'GA1.2.892033734.1601832784',
@@ -72,13 +76,16 @@ data = {
 response = requests.post('https://fantasydata.com/NFL_FantasyStats/FantasyStats_Read',
                          headers=headers, cookies=cookies, data=data)
 
+# List of Player data unfiltered
 dataJson = response.json()['Data']
 
+# Keys we will filter for
 variableDef = ['Name', 'Team', 'Position', 'Week', 'Opponent', 'Season', 'GameStatus', 'TeamIsHome', 'HomeScore',
-               'AwayScore',
-               'PassingYards', 'PassingTouchdowns', 'Interceptions', 'PassingAttempts', 'PassingCompletions',
-               'RushingAttempts',
-               'RushingYards', 'Receptions', 'ReceivingTargets', 'ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
+               'AwayScore', 'PassingYards', 'PassingTouchdowns', 'Interceptions', 'PassingAttempts',
+               'PassingCompletions', 'RushingAttempts', 'RushingYards', 'Receptions', 'ReceivingTargets',
+               'ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
+
+# each element in the list is a dictionary for each player, a sample dict below
 sampleDict = {'PlayerID': 18858, 'Season': 2020, 'Played': 1, 'Started': 0, 'Week': 4, 'Opponent': 'JAX',
               'TeamHasPossession': True, 'HomeOrAway': None, 'TeamIsHome': True, 'Result': '', 'HomeScore': 27,
               'AwayScore': 16, 'Quarter': '4', 'QuarterDisplay': 'Q4', 'IsGameOver': False,
@@ -100,7 +107,7 @@ sampleDict = {'PlayerID': 18858, 'Season': 2020, 'Played': 1, 'Started': 0, 'Wee
               'FantasyPointsPerGamePPR': 37.4, 'FantasyPointsPerGameFanDuel': 34.4, 'FantasyPointsPerGameYahoo': 34.4,
               'FantasyPointsPerGameDraftKings': 40.4, 'FantasyPointsPerGameHalfPointPPR': 34.4,
               'FantasyPointsPerGameSixPointPassTd': 31.4, 'FantasyPointsPerGameFantasyDraft': 40.4,
-              'PlayerUrlString': '/nfl/joe-mixon-fantasy/18858', 'GameStatus': 'P',
+              'PlayerUrlString': '/nfl/joe-mixon-fantasy/18858', 'GameStatus': '',
               'GameStatusClass': 'gamestatus_green', 'PointsAllowedByDefenseSpecialTeams': None, 'TotalTackles': 0.0,
               'StatSummary': [{'Items': [{
                   'StatValue': '18', 'StatTitle': 'ATT'}, {'StatValue': '104', 'StatTitle': 'YDS'},
@@ -112,24 +119,33 @@ sampleDict = {'PlayerID': 18858, 'Season': 2020, 'Played': 1, 'Started': 0, 'Wee
               'FirstName': 'Joe', 'LastName': 'Mixon', 'FantasyPosition': 'RB', 'Position': 'RB',
               'TeamUrlString': '/nfl/cincinnati-bengals-depth-chart', 'Team': 'CIN', 'IsScrambled': False, 'Rank': 1,
               'StaticRank': 0, 'PositionRank': None, 'IsFavorite': False}
-filteredStats = {definitions: sampleDict[definitions] for definitions in variableDef}
 
-if(filteredStats['TeamIsHome'] == False):
+# Filter Process, could be optimized I think
+filteredStats = {definitions: sampleDict[definitions] for definitions in variableDef}
+if (filteredStats['TeamIsHome'] == False):
     temp = filteredStats['HomeScore']
     filteredStats['HomeScore'] = filteredStats['AwayScore']
     filteredStats['AwayScore'] = temp
 del filteredStats['TeamIsHome']
 
+# Combining the values from the filtered dictionary to to new Key names for CSV
 variableDefKeys = ['Name', 'Team', 'Pos', 'Wk', 'Opp', 'Year', 'Status', 'TeamScore', 'OppScore', 'PassYds',
-                      'PassingTD',
-                      'Int', 'PassingAtt', 'Cmp', 'RushingAtt', 'RushingYds', 'RushingTD', 'Rec', 'Tgs', 'ReceivingYds',
-                      'ReceivingTD', 'FL']
+                   'PassingTD', 'Int', 'PassingAtt', 'Cmp', 'RushingAtt', 'RushingYds', 'RushingTD', 'Rec', 'Tgs',
+                   'ReceivingYds', 'ReceivingTD', 'FL']
 variableDefValues = list(filteredStats.values())
+for index, value in enumerate(variableDefValues):
+    if isinstance(value, float):
+        variableDefValues[index] = int(value);
+    if (value == ''):
+        variableDefValues[index] = 0;
 
-weeklyStatsDict = dict(zip(variableDefKeys,variableDefValues))
-weeklyStatsDict = [int(x) for x in list(weeklyStatsDict.values()) if x == type(float)]
-#print(filteredStats)
-print(weeklyStatsDict)
-#for definition in variableDefNewName:
+weeklyPlayerStatsDict = dict(zip(variableDefKeys, variableDefValues))
 
-# print(parsedDataJson)
+mainPlayerDataList.append(weeklyPlayerStatsDict)
+
+# to csv
+keys = mainPlayerDataList[0].keys()
+with open('playerData.csv', 'w', encoding='utf8', newline='') as output_file:
+    fc = csv.DictWriter(output_file, fieldnames=mainPlayerDataList[0].keys())
+    fc.writeheader()
+    fc.writerows(mainPlayerDataList)
