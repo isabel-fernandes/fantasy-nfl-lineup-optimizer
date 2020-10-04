@@ -18,7 +18,7 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 
 ### FanDuel Salaries
 Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) <br>
-Sample: `data/fan duel/fd_salaries.csv`
+Sample: `data/fanduel_salaries/fd_salaries_2019.csv`
 - Note that this sample csv does not exactly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual webscraper outputs.
 
 #### Variable Definitions
@@ -35,7 +35,7 @@ Sample: `data/fan duel/fd_salaries.csv`
 
 ### Weekly Player Stat Requirements
 If a stat (such as passing stats) is not applicable to a particular player, then the value will be 0, not empty. <br>
-Sample: `data/sample_weekly.csv`
+Sample: `data/weekly_players/sample_weekly.csv`
 - Note that this sample csv does not exacly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual web-scraper outputs.
 
 #### Variable Definitions
