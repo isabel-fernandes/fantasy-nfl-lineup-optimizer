@@ -29,7 +29,7 @@ headers = {
 
 data = {
     'sort': 'FantasyPointsPPR-desc',
-    'pageSize': '900',
+    'pageSize': '2000',
     'group': '',
     'filter': '',
     'filters.position': '',
@@ -67,10 +67,9 @@ data = {
     'filters.type': ''
 }
 
-def getRawData(player_amount, starting_week, end_week, year):
-    data['pageSize'] = player_amount
-    data['filters.startweek'] = starting_week
-    data['filters.endweek'] = end_week
+def getRawData(week, year):
+    data['filters.startweek'] = week
+    data['filters.endweek'] = week
     data['filters.season'] = year
 
     response = requests.post('https://fantasydata.com/NFL_FantasyStats/FantasyStats_Read', headers=headers,
@@ -97,9 +96,7 @@ def filterDictionary(player_weekly_data):
     # Filter Process, could be optimized I think
     filtered_stats = {definitions: player_weekly_data[definitions] for definitions in variable_def}
     if filtered_stats['TeamIsHome'] is False:
-        temp = filtered_stats['HomeScore']
-        filtered_stats['HomeScore'] = filtered_stats['AwayScore']
-        filtered_stats['AwayScore'] = temp
+        filtered_stats['HomeScore'], filtered_stats['AwayScore'] = filtered_stats['AwayScore'], filtered_stats['HomeScore']
     del filtered_stats['TeamIsHome']
 
     # Combining the values from the filtered dictionary to to new Key names for CSV
@@ -122,6 +119,6 @@ def makeCSV(filtered_player_weekly, name):
         fc.writerows(filtered_player_weekly)
 
 
-raw_players_weekly_data = getRawData(900, 2, 3, 2020)
+raw_players_weekly_data = getRawData(2, 2020)
 player_Weekly_Data = filterData(raw_players_weekly_data)
-makeCSV(player_Weekly_Data, 'player_weekly_data2.csv')
+makeCSV(player_Weekly_Data, 'player_weekly_data.csv')
