@@ -1,14 +1,6 @@
-import requests
 import csv
+import requests
 
-# variables that control the date
-startingWeek =2
-year = 2020
-
-# List of dictionaries that will be turned into a csv
-mainPlayerDataList = []
-
-# requests made to get data
 cookies = {
     '_ga': 'GA1.2.1311463715.1601832784',
     '_gid': 'GA1.2.892033734.1601832784',
@@ -23,13 +15,15 @@ headers = {
     'accept': 'application/json, text/javascript, */*; q=0.01',
     'dnt': '1',
     'x-requested-with': 'XMLHttpRequest',
-    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/85.0.4183.121 Safari/537.36',
     'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
     'origin': 'https://fantasydata.com',
     'sec-fetch-site': 'same-origin',
     'sec-fetch-mode': 'cors',
     'sec-fetch-dest': 'empty',
-    'referer': 'https://fantasydata.com/nfl/fantasy-football-leaders?season=2019&seasontype=1&scope=2&subscope=1&scoringsystem=2&startweek=1&endweek=17&aggregatescope=1&range=1',
+    'referer': 'https://fantasydata.com/nfl/fantasy-football-leaders?season=2019&seasontype=1&scope=2&subscope=1'
+               '&scoringsystem=2&startweek=1&endweek=17&aggregatescope=1&range=1',
     'accept-language': 'en-US,en;q=0.9,es-US;q=0.8,es;q=0.7,ja;q=0.6,es-419;q=0.5',
 }
 
@@ -41,7 +35,7 @@ data = {
     'filters.position': '',
     'filters.team': '',
     'filters.teamkey': '',
-    'filters.season': str(year),
+    'filters.season': '',
     'filters.seasontype': '1',
     'filters.cheatsheettype': '',
     'filters.scope': '2',
@@ -51,8 +45,8 @@ data = {
     'filters.leaguetype': '',
     'filters.searchtext': '',
     'filters.week': '',
-    'filters.startweek': str(startingWeek),
-    'filters.endweek': str(startingWeek + 1),
+    'filters.startweek': '',
+    'filters.endweek': '',
     'filters.minimumsnaps': '',
     'filters.teamaspect': '',
     'filters.stattype': '',
@@ -73,48 +67,62 @@ data = {
     'filters.type': ''
 }
 
-response = requests.post('https://fantasydata.com/NFL_FantasyStats/FantasyStats_Read',
-                         headers=headers, cookies=cookies, data=data)
+def getRawData(player_amount, starting_week, end_week, year):
+    data['pageSize'] = player_amount
+    data['filters.startweek'] = starting_week
+    data['filters.endweek'] = end_week
+    data['filters.season'] = year
 
-# List of Player data unfiltered
-dataJson = response.json()['Data']
+    response = requests.post('https://fantasydata.com/NFL_FantasyStats/FantasyStats_Read', headers=headers,
+                             cookies=cookies, data=data)
+    return response.json()['Data']
 
-def filterDictionary(playerDictionary):
+
+
+def filterData(raw_player_data):
+    mainPlayerDataList = []
+    for player_weekly_data in raw_player_data:
+        filtered_player_dictionary = filterDictionary(player_weekly_data)
+        mainPlayerDataList.append(filtered_player_dictionary)
+    return mainPlayerDataList
+
+
+# TODO: See if there is a way to optimize
+def filterDictionary(player_weekly_data):
     # Keys we will filter for
-    variableDef = ['Name', 'Team', 'Position', 'Week', 'Opponent', 'Season', 'GameStatus', 'TeamIsHome', 'HomeScore',
-                   'AwayScore', 'PassingYards', 'PassingTouchdowns', 'Interceptions', 'PassingAttempts',
-                   'PassingCompletions', 'RushingAttempts', 'RushingYards', 'Receptions', 'ReceivingTargets',
-                   'ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
+    variable_def = ['Name', 'Team', 'Position', 'Week', 'Opponent', 'Season', 'GameStatus', 'TeamIsHome', 'HomeScore',
+                    'AwayScore', 'PassingYards', 'PassingTouchdowns', 'Interceptions', 'PassingAttempts',
+                    'PassingCompletions', 'RushingAttempts', 'RushingYards', 'Receptions', 'ReceivingTargets',
+                    'ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
 
     # Filter Process, could be optimized I think
-    filteredStats = {definitions: playerDictionary[definitions] for definitions in variableDef}
-    if filteredStats['TeamIsHome'] is False:
-        temp = filteredStats['HomeScore']
-        filteredStats['HomeScore'] = filteredStats['AwayScore']
-        filteredStats['AwayScore'] = temp
-    del filteredStats['TeamIsHome']
+    filtered_stats = {definitions: player_weekly_data[definitions] for definitions in variable_def}
+    if filtered_stats['TeamIsHome'] is False:
+        temp = filtered_stats['HomeScore']
+        filtered_stats['HomeScore'] = filtered_stats['AwayScore']
+        filtered_stats['AwayScore'] = temp
+    del filtered_stats['TeamIsHome']
 
     # Combining the values from the filtered dictionary to to new Key names for CSV
-    variableDefKeys = ['Name', 'Team', 'Pos', 'Wk', 'Opp', 'Year', 'Status', 'TeamScore', 'OppScore', 'PassYds',
-                       'PassingTD', 'Int', 'PassingAtt', 'Cmp', 'RushingAtt', 'RushingYds', 'RushingTD', 'Rec', 'Tgs',
-                       'ReceivingYds', 'ReceivingTD', 'FL']
-    variableDefValues = list(filteredStats.values())
-    for index, value in enumerate(variableDefValues):
+    variable_def_keys = ['Name', 'Team', 'Pos', 'Wk', 'Opp', 'Year', 'Status', 'TeamScore', 'OppScore',
+                         'PassYds', 'PassingTD', 'Int', 'PassingAtt', 'Cmp', 'RushingAtt', 'RushingYds',
+                         'RushingTD', 'Rec', 'Tgs', 'ReceivingYds', 'ReceivingTD', 'FL']
+    variable_def_values = list(filtered_stats.values())
+    for index, value in enumerate(variable_def_values):
         if isinstance(value, float):
-            variableDefValues[index] = int(value)
+            variable_def_values[index] = int(value)
         if value == '':
-            variableDefValues[index] = 0
-    weeklyPlayerStatsDict = dict(zip(variableDefKeys, variableDefValues))
+            variable_def_values[index] = 0
+    return dict(zip(variable_def_keys, variable_def_values))
 
-    return weeklyPlayerStatsDict
 
-for dictionary in dataJson:
-    filteredPlayerDictionary = filterDictionary(dictionary)
-    mainPlayerDataList.append(filteredPlayerDictionary)
+def makeCSV(filtered_player_weekly, name):
+    with open(name, 'w', encoding='utf8', newline='') as output_file:
+        fc = csv.DictWriter(output_file, fieldnames=filtered_player_weekly[0].keys())
+        fc.writeheader()
+        fc.writerows(filtered_player_weekly)
 
-# to csv
-keys = mainPlayerDataList[0].keys()
-with open('player_weekly_data.csv', 'w', encoding='utf8', newline='') as output_file:
-    fc = csv.DictWriter(output_file, fieldnames=mainPlayerDataList[0].keys())
-    fc.writeheader()
-    fc.writerows(mainPlayerDataList)
+
+raw_players_weekly_data = getRawData(900, 2, 3, 2020)
+player_Weekly_Data = filterData(raw_players_weekly_data)
+makeCSV(player_Weekly_Data, 'player_weekly_data2.csv')
