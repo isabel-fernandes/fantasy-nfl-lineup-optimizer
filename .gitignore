@@ -1,5 +1,6 @@
 # Large Data Files
 raw_data/*
+data/nfl_weather/*
 
 # Desktop Service Store
 .DS_Store
@@ -8,4 +9,4 @@ raw_data/*
 env/*
 
 # ipynb checkpoints
-~/.pynb_checkpoints/* 
+~/.pynb_checkpoints/*
