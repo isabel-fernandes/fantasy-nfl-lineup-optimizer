@@ -15,6 +15,7 @@ import gc
 
 dir_in = "../data/"
 dir_fanduel = "../data/fanduel_salaries/" 
+dir_nflweather = "../data/nfl_weather/" 
 files = os.listdir(dir_in)
 
 
@@ -432,4 +433,129 @@ def merge_salaries(players, salaries):
 
 nfl_fanduel_dfs = merge_salaries(nfl_dfs, fanduel_dfs)
 
+# Year column got lost when I called create_nfl_features() on 
+# each dataframe, so I am adding it back
+
+def add_year(df, yr):
+    df['year'] = yr
+    return df
+
+for year in nfl_fanduel_dfs.keys():
+    df_year = nfl_fanduel_dfs[year]
+    nfl_fanduel_dfs[year] = add_year(df_year, year)
+
+    
+# TODO: The scraper for snap counts is not include in the git repo!!! 
+# Merge Snap Counts
+# Snapcounts are the number of times a player is on the field for a ply. 
+# Football outsiders has a historical database of weekly snap counts for each player. 
+
+def merge_snap_counts(dfs):
+    path = './data/FO_data/SnapCounts/'
+    SC_files = os.listdir(path)
+
+    SC_dfs = []
+    for fn in SC_files:
+        week = int(fn[:2])
+        year = int(fn[3:7])
+        df = pd.read_csv(path+fn)
+        df['week'] = week
+        df['year'] = year
+        SC_dfs.append(df)
+    sc = pd.concat(SC_dfs)
+
+    sc['number'] = pd.to_numeric(sc.Player.str.replace('[^0-9]',''))
+    sc['last_name'] = sc.Player.str.replace('[A-Za-z\s]+\.','')
+    sc['last_name'] = sc.last_name.str.replace('[^A-Za-z\s]','').str.strip()
+    sc['started'] = sc['Started'].apply(lambda x: 1 if x=='YES' else 0)
+    sc['offensive_snap_pct'] = pd.to_numeric(sc['Off Snap Pct'].str.replace('[^0-9]',''), 
+                                             downcast='float')
+    sc['offensive_snap_tot'] = sc['Off Snaps']
+    sc['position'] = sc.Position.str.replace('FB','RB').str.strip()
+    sc['team'] = sc['Team'].str.replace('LARM/STL','LA')
+    sc['team'] = sc['team'].str.replace('LAR','LA')
+    sc['team'] = sc['team'].str.replace('LAC','SD').str.strip()
+
+    sc = sc[sc.position.isin(['QB','RB','WR','TE'])]
+    sc = sc[['number','last_name','started','offensive_snap_pct',
+             'offensive_snap_tot','position','team','week','year']]
+    new_dfs = {}
+    for year, df in dfs.items():
+        merge_df = df.merge(sc, on=['last_name','team','week','year','position'])
+        new_dfs[year] = merge_df
+    return new_dfs
+
+# ***** For now just making snapcount merged df a COPY 
+nfl_fd_sc_dfs = nfl_fanduel_dfs.copy() 
+
+# Merge gameday weather forecasts 
+def merge_weather(dfs):
+    #from data.nfl_teams import team_dict # TODO: convert this to a meta data file 
+    team_dict = {
+        "Cardinals": "ARI", 
+        "Falcons": "ATL", 
+        "Ravens": "BAL", 
+        "Bills": "BUF", 
+        "Panthers": "CAR", 
+        "Bears": "CHI", 
+        "Bengals": "CIN", 
+        "Browns": "CLE", 
+        "Cowboys": "DAL", 
+        "Broncos": "DEN", 
+        "Lions": "DET", 
+        "Packers": "GB", 
+        "Texans": "HOU", 
+        "Colts": "IND", 
+        "Jaguars": "JAX",
+        "Chiefs": "KC",
+        "Dolphins": "MIA", 
+        "Vikings": "MIN", 
+        "Patriots": "NE",
+        "Saints": "NO",
+        "Giants": "NYG",
+        "Jets": "NYJ",
+        "Raiders": "OAK",
+        "Eagles": "PHI",
+        "Steelers": "PIT",
+        "Chargers": "SD",
+        "49ers": "SF",
+        "Seahawks": "SEA",
+        "Rams": "LA",
+        "Buccaneers": "TB",
+        "Titans": "TEN",
+        "Redskins": "WAS"
+    }
+    path = dir_nflweather
+    weather_files = os.listdir(path)
+    weather_dfs = []
+    for fn in weather_files:
+        week = re.findall('_[0-9]+\.',fn)
+        week = re.sub('[^0-9]','',str(week))
+        year = fn[:4]
+        df = pd.read_csv(path+fn)
+        df['week'] = int(week)
+        df['year'] = int(year)
+        weather_dfs.append(df)
+    weather = pd.concat(weather_dfs)
+
+    weather['team1'] = weather['team1'].apply(lambda x: team_dict[x])
+    weather['team2'] = weather['team2'].apply(lambda x: team_dict[x])
+
+    weather['wind_conditions'] = pd.to_numeric(weather['wind_conditions'].str.replace('[^0-9]',''))
+    weather['indoor_outdoor'] = weather['weather_forecast'].apply(lambda x: 1 if 'DOME' in x else 0)
+
+    weather1 = weather[['team1','wind_conditions','indoor_outdoor','week','year']]
+    weather1.columns = ['team','wind_conditions','indoor_outdoor','week','year']
+    weather2 = weather[['team2','wind_conditions','indoor_outdoor','week','year']]
+    weather2.columns = ['team','wind_conditions','indoor_outdoor','week','year']
+    weather = pd.concat([weather1,weather2])
+    
+    new_dfs = {}
+    for year, df in dfs.items():
+        merge_df = df.merge(weather,on=['team','week','year'])
+        new_dfs[year] = merge_df
+    return new_dfs
+nfl_fd_sc_weather_dfs = merge_weather(nfl_fd_sc_dfs)
+
+# Train and Test Datasets
 
