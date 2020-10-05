@@ -78,7 +78,6 @@ def getRawData(player_amount, starting_week, end_week, year):
     return response.json()['Data']
 
 
-
 def filterData(raw_player_data):
     mainPlayerDataList = []
     for player_weekly_data in raw_player_data:
@@ -92,8 +91,8 @@ def filterDictionary(player_weekly_data):
     # Keys we will filter for
     variable_def = ['Name', 'Team', 'Position', 'Week', 'Opponent', 'Season', 'GameStatus', 'TeamIsHome', 'HomeScore',
                     'AwayScore', 'PassingYards', 'PassingTouchdowns', 'Interceptions', 'PassingAttempts',
-                    'PassingCompletions', 'RushingAttempts', 'RushingYards', 'Receptions', 'ReceivingTargets',
-                    'ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
+                    'PassingCompletions', 'RushingAttempts', 'RushingYards', 'RushingTouchdowns', 'Receptions',
+                    'ReceivingTargets','ReceivingYards', 'ReceivingTouchdowns', 'Fumbles']
 
     # Filter Process, could be optimized I think
     filtered_stats = {definitions: player_weekly_data[definitions] for definitions in variable_def}
