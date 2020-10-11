@@ -98,7 +98,7 @@ Sample: `data/weekly_players/sample_weekly.csv`
 | Wk                    | Week of season                | Int       | 1-17               |
 | Opp                   | Opponent team's abbreviation  | String    | GB, CAR, NYG, ...  |
 | Year                  | Starting year of the season   | Int       |                    |
-| Status                | Injury Status of Player       | String    | Q, O, IR, ,<-n/a   |
+| Status                | Injury Status of Player       | String    | Q, O, IR, 0        |
 | TeamScore             | Player's team's score in game | Int       |                    |
 | OppScore              | Opponent team's score in game | Int       |                    |
 | PassingYds            | Passing yards                 | Int       |                    |
