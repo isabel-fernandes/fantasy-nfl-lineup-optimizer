@@ -14,9 +14,16 @@ import gc
 # nflgame_acquire.ipynb (scrape_nflgames.py)
 
 dir_in = "../data/"
-dir_fanduel = "../data/fanduel_salaries/" 
-dir_nflweather = "../data/nfl_weather/" 
+dir_fanduel = "../data/fanduel_salaries/"
+dir_nflweather = "../data/nfl_weather/"
 files = os.listdir(dir_in)
+
+class PredictiveModel(object):
+    def __init__(self):
+        self.years = []
+        self.X_vars = []
+        self.y_var = "fd_points"
+        self.b_var = "fd_proj"
 
 
 class WeeklyStats:
@@ -32,7 +39,7 @@ class WeeklyStats:
         if "position_fill" in df:
             del df['position_fill']
         df['year'] = self.year
-        df = df.rename(columns={"name": "full_name"}) 
+        df = df.rename(columns={"name": "full_name"})
         df = df.reset_index()
         return df
 
@@ -45,7 +52,7 @@ class WeeklyStats:
         df['opp_OPP'] = df['opp_OPP'].str.replace('LAC','SD')
         df['opp_TEAM'] = df['opp_TEAM'].str.replace('STL','LA')
         df['opp_OPP'] = df['opp_OPP'].str.replace('STL','LA')
-        df = df.reset_index() 
+        df = df.reset_index()
         return df
 
 player_stats_files = [WeeklyStats(os.path.join(dir_in,f)) for f in files if "player_stats_" in f]
@@ -66,27 +73,27 @@ for ofile in opp_stats_files:
 #       'opp_total_yds', 'opp_turnovers', 'week', 'year']
 
 opp_cols_rename_dict = {
-    "opp_week": "week", 
-    "opp_TEAM": "offense", 
-    "opp_OPP": "defense", 
-    "opp_opp_points": "opp_points", 
-    "opp_first_downs": "opp_first_downs", 
-    "opp_total_yds": "opp_total_yds", 
-    "opp_passing_yds": "opp_passing_yds", 
-    "opp_rushing_yds": "opp_rushing_yds", 
-    "opp_penalty_yds": "opp_penalty_yds", 
-    "opp_penalty_cnt": "opp_penalty_cnt", 
-    "opp_turnovers": "opp_turnovers", 
-    "opp_punt_cnt": "opp_punt_cnt", 
-    "opp_punt_yds": "opp_punt_yds", 
-    "opp_punt_avg": "opp_punt_avg", 
-    "opp_pos_time": "opp_pos_time", 
-    "year": "year"    
+    "opp_week": "week",
+    "opp_TEAM": "offense",
+    "opp_OPP": "defense",
+    "opp_opp_points": "opp_points",
+    "opp_first_downs": "opp_first_downs",
+    "opp_total_yds": "opp_total_yds",
+    "opp_passing_yds": "opp_passing_yds",
+    "opp_rushing_yds": "opp_rushing_yds",
+    "opp_penalty_yds": "opp_penalty_yds",
+    "opp_penalty_cnt": "opp_penalty_cnt",
+    "opp_turnovers": "opp_turnovers",
+    "opp_punt_cnt": "opp_punt_cnt",
+    "opp_punt_yds": "opp_punt_yds",
+    "opp_punt_avg": "opp_punt_avg",
+    "opp_pos_time": "opp_pos_time",
+    "year": "year"
 }
 
 for year, df in opp_dfs.items():
     #df.columns = new_opp_cols
-    df = df.rename(columns=opp_cols_rename_dict) 
+    df = df.rename(columns=opp_cols_rename_dict)
     opp_dfs[year] = df
 
 # Clean data and create target variable
@@ -101,14 +108,14 @@ means = means[['id','position_fill']]
 means['position_fill'] = means['position_fill'].apply(lambda x: np.nan if x == 'WRTE' else x)
 
 
-# Modeule not included in the git repo 
+# Modeule not included in the git repo
 #from data.missing_plyrs import missing_WRTE
 
 def fill_positions(name):
-    """Fill missing positions for players who are retired. The nflgame players.json 
+    """Fill missing positions for players who are retired. The nflgame players.json
     will not update these positions, nor are the positions available by scraping each
     player's nfl.com profile url."""
-    
+
     '''
     try:
         pos = missing_WRTE[name]
@@ -116,13 +123,13 @@ def fill_positions(name):
     except KeyError:
         return ''
     '''
-    return "" 
+    return ""
 
 def clean(player_stats, year, imputed):
     """Create fantasy_points (the target variable) according to a standard scoring regime.
        Create pass/rush/reception ratios to be included in feature set for model.
        Trim the dataset to include the four main offensive positions: QB, RB, WR, TE."""
-    
+
     player_stats['fantasy_points'] = (player_stats['passing_tds'] * 4) +\
     (player_stats['passing_yds'] * 0.04) +\
     (player_stats['passing_twoptm'] * 2) +\
@@ -136,7 +143,7 @@ def clean(player_stats, year, imputed):
     (player_stats['kickret_tds'] * 6) +\
     (player_stats['puntret_tds'] * 6) +\
     (player_stats['fumbles_lost'] * -2)
-    
+
     player_stats['passer_ratio'] = player_stats['passing_cmp']/player_stats['passing_att']
     player_stats['PassRushRatio_Att'] = player_stats['rushing_att'] / player_stats['passing_att']
     player_stats['PassRushRatio_Yds'] = player_stats['rushing_yds'] / player_stats['passing_yds']
@@ -144,28 +151,28 @@ def clean(player_stats, year, imputed):
     player_stats['RushRecRatio_AttRec'] = player_stats['rushing_att'] / player_stats['receiving_rec']
     player_stats['RushRecRatio_Tds'] = player_stats['rushing_tds'] / player_stats['receiving_tds']
     player_stats['RushRecRatio_Yds'] = player_stats['rushing_yds'] / player_stats['receiving_yds']
-    
+
     player_stats = player_stats.merge(imputed, how='left', on='id')
     player_stats['position'].fillna(player_stats['position_fill'], inplace=True)
     player_stats['position_fill'] = player_stats['full_name'].apply(lambda x: fill_positions(x))
     player_stats['position'].fillna(player_stats['position_fill'], inplace=True)
- 
+
     include_positions = ['QB', 'TE', 'WR', 'RB']
     player_stats['position'] = player_stats['position'].str.replace('FB','RB')
     player_stats = player_stats[player_stats['position'].isin(include_positions)]
     return player_stats
 
-# Create dictionary with keys as year of the NFL season and values 
+# Create dictionary with keys as year of the NFL season and values
 # as a dataframe containing game summary stats for all players in that season
 player_dfs = {year:clean(df, year, means) for year, df in player_dfs.items()}
 
 for year in range(2013,2018):
     print(player_dfs[year].shape)
-    
-# Feature Engineering 
+
+# Feature Engineering
 # These are the game summary stats relevant to QB, RB, WR, and TE positions.
 
-stat_cols = ['fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds', 
+stat_cols = ['fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
        'passing_att', 'passing_cmp', 'passing_ints', 'passing_tds', 'passer_ratio',
        'passing_twopta', 'passing_twoptm', 'passing_yds',
        'puntret_tds','puntret_avg', 'puntret_lng', 'puntret_lngtd', 'puntret_ret',
@@ -182,13 +189,13 @@ def trim_sort(df):
     return df
 
 def get_trend(df_in):
-    
+
     """Compute a three-week trend for each game statistic, for each player."""
     # Drop non-ID identifier columns
-    drop_cols = ["team", "position", "full_name"] 
-    groupby_cols = ["id"] 
-    df = df_in[[c for c in df_in if c not in drop_cols]] 
-    
+    drop_cols = ["team", "position", "full_name"]
+    groupby_cols = ["id"]
+    df = df_in[[c for c in df_in if c not in drop_cols]]
+
     '''
     # compute 3-week and 2-week points deltas
     deltas = df.groupby(['id']).pct_change()
@@ -219,12 +226,12 @@ def get_trend(df_in):
         name = 'trend_'+col
         trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
     return trend_df
-    
+
 
 def get_cumul_mean_stats(df, weeks):
-    
+
     """Create a rolling mean for each statistic by player, by week."""
-    
+
     weeks_stats_mean = []
     for week in weeks:
         tmp = df[df.week <= week]
@@ -237,9 +244,9 @@ def get_cumul_mean_stats(df, weeks):
     return cumavg_stats
 
 def get_cumul_stats_time_weighted(df, weeks):
-    
+
     """Create a rolling time-wegihted mean for each statistic by player, by week."""
-    
+
     weeks_stats_mean_wgt = []
     for week in weeks:
         tmp1 = df[df.week <= week]
@@ -254,7 +261,7 @@ def get_cumul_stats_time_weighted(df, weeks):
     return cumavg_stats_wgt
 
 def defensive_ptsallow(matchups, weeks, weighted=False):
-    
+
     """ Compute the mean weekly points given up by each defense to each position.
         Parameters:
                     matchups: dataframe of matchups between offensive player, and
@@ -263,7 +270,7 @@ def defensive_ptsallow(matchups, weeks, weighted=False):
                     weighted: boolean. If true, compute weekly points allowed according
                               to player-weighted fantasy points.
     """
-    
+
     agg_col = 'fantasy_points'
     output_name = 'defensive_matchup_allowed'
     if weighted:
@@ -284,9 +291,9 @@ def defensive_ptsallow(matchups, weeks, weighted=False):
     return defense_ranks
 
 def weekly_player_weights(matchups, weeks):
-    
+
     """Calculate season-to-date (STD) weekly fantasy points rankings by position."""
-    
+
     player_weights = []
     for week in weeks:
         mask = (matchups.week <= week)
@@ -307,16 +314,16 @@ def weekly_player_weights(matchups, weeks):
     return player_weights[['id','week','position','player_weight']]
 
 def create_nfl_features(player_stats_orig, opp_stats_orig):
-    
+
     """Wrapper function that calls all helpers to create custom player and team
        defense stats. This function will return a new dataframe that has merged
        all of the custom stats described in the helper functions for each player.
-       
+
        Parameters:
                    player_stats_orig: game summary actuals for each player weekly
                    opp_stats_orig:    matchups for each game (can substitute with
                                       a schedule with player_id, offense, defense, week)"""
-    
+
     player_stats_trimmed = trim_sort(player_stats_orig)
     weeks = sorted(player_stats_trimmed.week.unique().tolist())
 
@@ -337,7 +344,7 @@ def create_nfl_features(player_stats_orig, opp_stats_orig):
     matchups_wgts     = matchups.merge(player_weights, how='left', on=['id','week','position'])
     matchups_wgts['weighted_fantasy_points'] = matchups_wgts['fantasy_points'] * matchups_wgts['inverse']
     defense_ranks_wgt = defensive_ptsallow(matchups_wgts, weeks, weighted=True)
-    
+
     ## merge features
 
     # shift target variable, week, and defensive opponent
@@ -371,7 +378,7 @@ def create_nfl_features(player_stats_orig, opp_stats_orig):
     # create extra player attributes and merge to make model-ready df
     attribs = ['id','birthdate','years_pro','height','weight','position','profile_url','last_name','number']
     #player_attributes = player_stats_orig[attribs]
-    player_attributes = player_stats_orig[[c for c in player_stats_orig if c in attribs]] 
+    player_attributes = player_stats_orig[[c for c in player_stats_orig if c in attribs]]
     player_attributes.drop_duplicates(['id'],inplace=True)
     player_attributes['birthdate'] = pd.to_datetime(player_attributes['birthdate'])
     player_attributes['age'] = player_attributes['birthdate'].apply(lambda x: (datetime.today() - x).days/365)
@@ -433,7 +440,7 @@ def merge_salaries(players, salaries):
 
 nfl_fanduel_dfs = merge_salaries(nfl_dfs, fanduel_dfs)
 
-# Year column got lost when I called create_nfl_features() on 
+# Year column got lost when I called create_nfl_features() on
 # each dataframe, so I am adding it back
 
 def add_year(df, yr):
@@ -444,11 +451,11 @@ for year in nfl_fanduel_dfs.keys():
     df_year = nfl_fanduel_dfs[year]
     nfl_fanduel_dfs[year] = add_year(df_year, year)
 
-    
-# TODO: The scraper for snap counts is not include in the git repo!!! 
+
+# TODO: The scraper for snap counts is not include in the git repo!!!
 # Merge Snap Counts
-# Snapcounts are the number of times a player is on the field for a ply. 
-# Football outsiders has a historical database of weekly snap counts for each player. 
+# Snapcounts are the number of times a player is on the field for a ply.
+# Football outsiders has a historical database of weekly snap counts for each player.
 
 def merge_snap_counts(dfs):
     path = './data/FO_data/SnapCounts/'
@@ -468,7 +475,7 @@ def merge_snap_counts(dfs):
     sc['last_name'] = sc.Player.str.replace('[A-Za-z\s]+\.','')
     sc['last_name'] = sc.last_name.str.replace('[^A-Za-z\s]','').str.strip()
     sc['started'] = sc['Started'].apply(lambda x: 1 if x=='YES' else 0)
-    sc['offensive_snap_pct'] = pd.to_numeric(sc['Off Snap Pct'].str.replace('[^0-9]',''), 
+    sc['offensive_snap_pct'] = pd.to_numeric(sc['Off Snap Pct'].str.replace('[^0-9]',''),
                                              downcast='float')
     sc['offensive_snap_tot'] = sc['Off Snaps']
     sc['position'] = sc.Position.str.replace('FB','RB').str.strip()
@@ -485,31 +492,31 @@ def merge_snap_counts(dfs):
         new_dfs[year] = merge_df
     return new_dfs
 
-# ***** For now just making snapcount merged df a COPY 
-nfl_fd_sc_dfs = nfl_fanduel_dfs.copy() 
+# ***** For now just making snapcount merged df a COPY
+nfl_fd_sc_dfs = nfl_fanduel_dfs.copy()
 
-# Merge gameday weather forecasts 
+# Merge gameday weather forecasts
 def merge_weather(dfs):
-    #from data.nfl_teams import team_dict # TODO: convert this to a meta data file 
+    #from data.nfl_teams import team_dict # TODO: convert this to a meta data file
     team_dict = {
-        "Cardinals": "ARI", 
-        "Falcons": "ATL", 
-        "Ravens": "BAL", 
-        "Bills": "BUF", 
-        "Panthers": "CAR", 
-        "Bears": "CHI", 
-        "Bengals": "CIN", 
-        "Browns": "CLE", 
-        "Cowboys": "DAL", 
-        "Broncos": "DEN", 
-        "Lions": "DET", 
-        "Packers": "GB", 
-        "Texans": "HOU", 
-        "Colts": "IND", 
+        "Cardinals": "ARI",
+        "Falcons": "ATL",
+        "Ravens": "BAL",
+        "Bills": "BUF",
+        "Panthers": "CAR",
+        "Bears": "CHI",
+        "Bengals": "CIN",
+        "Browns": "CLE",
+        "Cowboys": "DAL",
+        "Broncos": "DEN",
+        "Lions": "DET",
+        "Packers": "GB",
+        "Texans": "HOU",
+        "Colts": "IND",
         "Jaguars": "JAX",
         "Chiefs": "KC",
-        "Dolphins": "MIA", 
-        "Vikings": "MIN", 
+        "Dolphins": "MIA",
+        "Vikings": "MIN",
         "Patriots": "NE",
         "Saints": "NO",
         "Giants": "NYG",
@@ -549,7 +556,7 @@ def merge_weather(dfs):
     weather2 = weather[['team2','wind_conditions','indoor_outdoor','week','year']]
     weather2.columns = ['team','wind_conditions','indoor_outdoor','week','year']
     weather = pd.concat([weather1,weather2])
-    
+
     new_dfs = {}
     for year, df in dfs.items():
         merge_df = df.merge(weather,on=['team','week','year'])
@@ -559,11 +566,11 @@ nfl_fd_sc_weather_dfs = merge_weather(nfl_fd_sc_dfs)
 
 # Train and Test Datasets
 # Train and validate on 2013-2016
-# Test on 2017 
+# Test on 2017
 for year in range(2013,2018):
     print(nfl_fd_sc_weather_dfs[year].shape)
 
-    
+
 max_year = max(list(nfl_fd_sc_weather_dfs.keys()))
 holdout = nfl_fd_sc_weather_dfs[2017]
 model_dfs = [nfl_fd_sc_weather_dfs[yr] for yr in nfl_fd_sc_weather_dfs.keys() if yr != max_year]
@@ -573,9 +580,9 @@ model_df.isnull().values.any()
 holdout.isnull().values.any()
 
 print(model_df.shape)
-print(holdout.shape) 
+print(holdout.shape)
 
-# Convert target to rank 
+# Convert target to rank
 model_df = model_df.sort_values(['year','position','week','target'], ascending=False).reset_index(drop=True)
 model_df['target_rank'] = model_df.groupby(['year','position','week'])['target'].\
                                     rank(method="dense", ascending=False)
@@ -588,8 +595,8 @@ holdout['target_rank'] = holdout.groupby(['year','position','week'])['target'].\
 model_df['target_rank'].hist(bins=40)
 
 
-# Merge with ESPN Benchmarks 
-# TODO: This data/scraper was not included in the git repo 
+# Merge with ESPN Benchmarks
+# TODO: This data/scraper was not included in the git repo
 '''
 proj = pd.read_json("./data/espn_projections.json")
 
@@ -629,13 +636,13 @@ holdout.dropna(inplace=True)
 holdout.sort_values(['year','position','week','proj_pts'], ascending=False, inplace=True)
 holdout['espn_rank'] = holdout.groupby(['year','position','week'])['proj_pts'].\
                                     rank(method="dense", ascending=False)
-                                    
-print(holdout.shape) 
-                                    
+
+print(holdout.shape)
+
 '''
 
-# Trim Outliers 
-# trim players who scored zero in a given week because they 
+# Trim Outliers
+# trim players who scored zero in a given week because they
 # are skewing the distribution for my target variable.
 
 thresh = 0
@@ -650,7 +657,7 @@ print(holdout.shape)
 print(tmp.shape)
 tmp.target.hist(bins=40)
 
-# TODO: NEED TO ADD IN ESPN PROJECTIONS FOR THIS CODE TO WORK 
+# TODO: NEED TO ADD IN ESPN PROJECTIONS FOR THIS CODE TO WORK
 '''
 tmp = holdout[holdout.proj_pts > thresh]
 print(holdout.shape)
@@ -660,16 +667,16 @@ tmp.proj_pts.hist(bins=40)
 
 model_df_trimmed = model_df[model_df.target > thresh].reset_index(drop=True)
 
-# TODO: NEED TO ADD IN ESPN PROJECTIONS FOR THIS CODE TO WORK 
-#holdout_trimmed = holdout[(holdout.target > thresh) & 
+# TODO: NEED TO ADD IN ESPN PROJECTIONS FOR THIS CODE TO WORK
+#holdout_trimmed = holdout[(holdout.target > thresh) &
 #                          (holdout.proj_pts > thresh)].reset_index(drop=True)
-holdout_trimmed = holdout[(holdout.target > thresh)].reset_index(drop=True) 
+holdout_trimmed = holdout[(holdout.target > thresh)].reset_index(drop=True)
 
-# Player stat interactions 
+# Player stat interactions
 '''
-The following merges serve the purpose to inform a given player of what type 
-of offense their team employs. For instance, merging the mean QB pass/rush 
-attempts ratio to that QB's WR gives an idea of how often the QB runs versus 
+The following merges serve the purpose to inform a given player of what type
+of offense their team employs. For instance, merging the mean QB pass/rush
+attempts ratio to that QB's WR gives an idea of how often the QB runs versus
 throwing, thus affecting the possible targets thrown to that WR.
 '''
 numeric_df_columns = model_df_trimmed.select_dtypes(include=['float32','int32','int64','float64','uint8']).columns
@@ -684,7 +691,7 @@ rushing_features = ['rushing_yds_mean','rushing_att_mean','rushing_tds_mean',
 
 receiving_features = ['receiving_rec_mean','receiving_tds_mean','receiving_yds_mean']
 
-# TODO: Need to create scraper for offensive snap pct, tot, and starts 
+# TODO: Need to create scraper for offensive snap pct, tot, and starts
 #sharedfeats = ['full_name','team','years_pro','age','weight','height','player_weight','year','week','target',
 #               'target_rank','fantasy_points_mean','target_week','defensive_matchup_allowed','offensive_snap_pct',
 #               'offensive_snap_tot','fd_salary','started','wind_conditions','indoor_outdoor']+fumble_features
@@ -736,8 +743,8 @@ print("RB:", RB_df.shape)
 print("WR:", WR_df.shape)
 print("TE:", TE_df.shape)
 
-# holdout 
-# TODO: Datascrape ESPN scores during test year 
+# holdout
+# TODO: Datascrape ESPN scores during test year
 #QB_features = QB_features+['espn_rank','proj_pts']
 #RB_features = RB_features+['espn_rank','proj_pts']
 #WR_features = WR_features+['espn_rank','proj_pts']
@@ -781,7 +788,7 @@ print("WR:", WR_df_holdout.shape)
 print("TE:", TE_df_holdout.shape)
 
 
-# Interactions by position 
+# Interactions by position
 from sklearn.preprocessing import PolynomialFeatures
 create_interactions = [('QB',QB_df), ('RB',RB_df), ('WR',WR_df), ('TE',TE_df)]
 interactions_positions = {}
@@ -821,7 +828,7 @@ QB_inters.sort_values('target',ascending=True).head()
 RB_inters.sort_values('target',ascending=True).head()
 TE_inters.sort_values('target',ascending=False).head(8)
 
-# Compute Interactions 
+# Compute Interactions
 QB_df.reset_index(inplace=True,drop=True)
 RB_df.reset_index(inplace=True,drop=True)
 WR_df.reset_index(inplace=True,drop=True)
@@ -855,7 +862,7 @@ WR_df_holdout['age receiving_yds_mean'] = WR_df_holdout['age']*WR_df_holdout['re
 TE_df_holdout['trend_fumbles_tot RBMEANRushRecRatio_AttRec_mean'] = TE_df_holdout['trend_fumbles_tot']*TE_df_holdout['RBMEANRushRecRatio_AttRec_mean']
 TE_df_holdout['age receiving_yds_mean'] = TE_df_holdout['age']*TE_df_holdout['receiving_yds_mean']
 
-# Memory Management 
+# Memory Management
 del player_dfs
 del opp_dfs
 del nfl_dfs
@@ -870,7 +877,7 @@ del TE_inters
 del interactions_positions
 gc.collect()
 
-# Regression Model 
+# Regression Model
 import sklearn.metrics as metrics
 import sklearn.linear_model as lin
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -881,39 +888,39 @@ from math import exp
 from sklearn.utils import shuffle
 
 RESPONSE_VAR = 'target'
-# TODO: Need to pull project points data and incorporate 
+# TODO: Need to pull project points data and incorporate
 #BENCHMARK = 'proj_pts'
 BENCHMARK = "target"
 CURR_WEEK = 14
 
 def regression_tts(input_df, week, response):
-    
+
     """Run a regression for each position (QB,RB,WR,TE),
        Train on first 14 weeks of each season 2013-2016,
        Test on last 3 weeks of each season 2013-2016"""
-    
+
     features = input_df.select_dtypes(include=['float32','int32','int64','float64','uint8']).columns.tolist()
     features.remove('year')
     features.remove('target')
     features.remove('target_rank')
     features.remove('target_week')
-    
+
     est = GradientBoostingRegressor(n_estimators=30, learning_rate=0.1)
 #     est = lin.LassoCV()
-    
+
     df_train = input_df[input_df.target_week <= week]
 #     df_train.sort_values('fantasy_points_mean',ascending=True,inplace=True)
     df_test = input_df[input_df.target_week > week]
-    
+
     X_train = df_train[features]
     y_train = df_train[response]
     X_test = df_test[features]
     y_test = df_test[response]
-    
+
     ss = StandardScaler()
     X_train = ss.fit_transform(X_train)
     X_test = ss.fit_transform(X_test)
-    
+
 #     sw = np.linspace(.01,1,X_train.shape[0])
     est.fit(X_train, y_train)
 
@@ -924,11 +931,11 @@ def regression_tts(input_df, week, response):
     y_pred = est.predict(X_test)
     test_results = (metrics.mean_squared_error(y_test, y_pred))**(0.5)
 #     test_results = metrics.r2_score(y_test, y_pred)
-    
+
     df_test = df_test.reset_index()[['target_week','fantasy_points_mean',response]]
     df_test['MODEL_PRED'] = pd.Series(y_pred)
     df_test['RESIDUALS'] = df_test['MODEL_PRED'] - df_test[response]
-    
+
     coefs = None
     if 'sklearn.linear_model' in est.__module__:
         coef_ranks = list(zip(abs(est.coef_), est.coef_, features))
@@ -936,7 +943,7 @@ def regression_tts(input_df, week, response):
     else:
         coef_ranks = list(zip(est.feature_importances_, features))
         coefs = sorted(coef_ranks, key=lambda x: x[0], reverse=True)
-        
+
     return test_results, train_results, est, coefs, df_test
 
 coefs_all = {}
@@ -946,23 +953,23 @@ resids_positions = []
 for pos, data in [('QB',QB_df),('RB',RB_df),('WR',WR_df),('TE',TE_df)]:
     print(pos)
     results_test, results_train, est, coefs, resids = regression_tts(data, CURR_WEEK, RESPONSE_VAR)
-    
+
     print('train results:',results_train)
     print('test  results:',results_test)
     coefs_all[pos] = coefs
     ests_positions[pos] = est
     resids['position'] = pos
     resids_positions.append(resids)
-    
+
 for pos in coefs_all.keys():
     print(pos)
     pprint(coefs_all[pos][:4])
-    
+
 QB_coefs_plot = [x[0] for x in coefs_all['QB']][:3]
 RB_coefs_plot = [x[0] for x in coefs_all['RB']][:3]
 WR_coefs_plot = [x[0] for x in coefs_all['WR']][:3]
-TE_coefs_plot = [x[0] for x in coefs_all['TE']][:3]    
-    
+TE_coefs_plot = [x[0] for x in coefs_all['TE']][:3]
+
 font = {'size'   : 18}
 matplotlib.rc('font', **font)
 fig, (ax1,ax2,ax3,ax4) = plt.subplots(1,4,figsize=(23,5), sharey=True)
@@ -971,9 +978,9 @@ for ax, title, pos_coefs in [(ax1,'QB',QB_coefs_plot), (ax2,'RB',RB_coefs_plot),
                       (ax3,'WR',WR_coefs_plot), (ax4,'TE',TE_coefs_plot)]:
     ax.bar(range(len(WR_coefs_plot)),WR_coefs_plot)
     ax.set_title(title)
-    ax.axes.xaxis.set_ticklabels([])    
-    
-# Model Output 
+    ax.axes.xaxis.set_ticklabels([])
+
+# Model Output
 #from sklearn.ensemble.partial_dependence import plot_partial_dependence
 from sklearn.inspection import plot_partial_dependence
 font = {'size'   : 16}
@@ -990,22 +997,22 @@ fd_sal = features.index('fd_salary')
 pr = features.index('receiving_rec_mean')
 pw = features.index('player_weight')
 dpa = features.index('defensive_matchup_allowed')
-# TODO: include once available 
+# TODO: include once available
 #snaps = features.index('offensive_snap_tot')
 X_train = RB_df[features]
 #X_train = X_train[X_train.week < CURR_WEEK].as_matrix()
-X_train = X_train[X_train.week < CURR_WEEK].values 
+X_train = X_train[X_train.week < CURR_WEEK].values
 
-# TODO: add back in offensive snaps when available 
+# TODO: add back in offensive snaps when available
 #features_idx = [fp_mean, fd_sal, dpa, pr, snaps, pw]
-features_idx = [fp_mean, fd_sal, dpa, pr, pw] 
+features_idx = [fp_mean, fd_sal, dpa, pr, pw]
 fig = plot_partial_dependence(ests_positions['RB'], X_train, features_idx,\
                                    feature_names=features,\
                                    n_jobs=-1, grid_resolution=50) #, figsize=(20,10))
 #fig.subtitle('Partial dependence for RBs')
-plt.suptitle("partial dependence for RBs") 
-plt.subplots_adjust(top=0.9) 
-    
+plt.suptitle("partial dependence for RBs")
+plt.subplots_adjust(top=0.9)
+
 model_results = pd.concat(resids_positions)
 model_results = model_results.sort_values('MODEL_PRED').reset_index()
 model_results_QB = resids_positions[0].sort_values('MODEL_PRED').reset_index()
@@ -1053,12 +1060,12 @@ def weekly_regression_predict(input_df, weeks, est, response, espn_response):
     features.remove('target')
     features.remove('target_rank')
     # TEST: removing target_week incase this is the reason for error
-    if 'target_week' in features: 
-        features.remove('target_week') 
-    # TODO: Uncomment these lines once projections and espn ranks available 
+    if 'target_week' in features:
+        features.remove('target_week')
+    # TODO: Uncomment these lines once projections and espn ranks available
     #features.remove('proj_pts')
     #features.remove('espn_rank')
-    
+
     week_nums = []
     scores = []
     bmk_scores = []
@@ -1066,7 +1073,7 @@ def weekly_regression_predict(input_df, weeks, est, response, espn_response):
 
     for week in weeks:
         week_nums.append(week)
-       
+
         df_cv = input_df[input_df.target_week == week]
         X = df_cv[features]
         y = df_cv[response]
@@ -1074,29 +1081,29 @@ def weekly_regression_predict(input_df, weeks, est, response, espn_response):
 #         X.sort_values('fantasy_points_mean',ascending=True,inplace=True)
         ss = StandardScaler()
         X = ss.fit_transform(X)
-        
+
         y_pred = est.predict(X)
 
 #         score = metrics.r2_score(y, y_pred)
 #         score = (metrics.mean_squared_error(y, y_pred))**(0.5)
         score = metrics.mean_absolute_error(y, y_pred)
         scores.append(score)
-    
+
 #         bmk_score = metrics.r2_score(y, y_benchmark)
 #         bmk_score = (metrics.mean_squared_error(y, y_benchmark))**(0.5)
         bmk_score = metrics.mean_absolute_error(y, y_benchmark)
         bmk_scores.append(bmk_score)
-        
+
         predicts = df_cv.reset_index()[['full_name','target_week', response, espn_response]]
         predicts['PREDICTION'] = pd.Series(y_pred)
-        if len(predicts[response].shape) == 2: 
-            predicts["ERROR"] = predicts["PREDICTION"] - predicts[response].iloc[:,0] 
+        if len(predicts[response].shape) == 2:
+            predicts["ERROR"] = predicts["PREDICTION"] - predicts[response].iloc[:,0]
             predicts["ESPN_ERROR"] = predicts[espn_response].iloc[:,0] - predicts[response].iloc[:,0]
-        else: 
+        else:
             predicts['ERROR'] = predicts['PREDICTION'] - predicts[response]
             predicts['ESPN_ERROR'] = predicts[espn_response] - predicts[response]
         predictions.append(predicts)
-        
+
     return week_nums, scores, bmk_scores, pd.concat(predictions)
 
 
@@ -1107,14 +1114,14 @@ for pos, data, ax in [('QB',QB_df_holdout,ax2),
                       ('RB',RB_df_holdout,ax3),
                       ('WR',WR_df_holdout,ax4),
                       ('TE',TE_df_holdout,ax5)]:
-    
-    weeks, scores, bmk_scores, predictions = weekly_regression_predict(data, weeks_predict, 
+
+    weeks, scores, bmk_scores, predictions = weekly_regression_predict(data, weeks_predict,
                                                                        ests_positions[pos],
                                                                        response=RESPONSE_VAR,
                                                                        espn_response=BENCHMARK)
     predictions['position'] = pos
     prediction_dfs[pos] = predictions
-    
+
     ax.plot(weeks, scores, label="Linear Model RMSE", linewidth=4)
     ax.plot(weeks, bmk_scores, label="ESPN RMSE", linewidth=4)
     ax.set_xticks(weeks)
@@ -1131,14 +1138,14 @@ all_bmk_scores = []
 for week in weeks_predict:
     weeks_all.append(week)
     weeks_results = holdout_results[holdout_results.target_week == week]
-    if len(weeks_results[RESPONSE_VAR].shape) == 2: 
+    if len(weeks_results[RESPONSE_VAR].shape) == 2:
         y = weeks_results[RESPONSE_VAR].iloc[:,0]
-    else: 
+    else:
         y = weeks_results[RESPONSE_VAR]
     y_pred = weeks_results['PREDICTION']
-    if len(weeks_results[BENCHMARK].shape) == 2: 
-        y_bmk = weeks_results[BENCHMARK].iloc[:,0] 
-    else: 
+    if len(weeks_results[BENCHMARK].shape) == 2:
+        y_bmk = weeks_results[BENCHMARK].iloc[:,0]
+    else:
         y_bmk = weeks_results[BENCHMARK]
 #     score = metrics.r2_score(y, y_pred)
 #     bmk_score = metrics.r2_score(y, y_bmk)
@@ -1146,7 +1153,7 @@ for week in weeks_predict:
     bmk_score = (metrics.mean_squared_error(y, y_bmk))**(0.5)
     all_scores.append(score)
     all_bmk_scores.append(bmk_score)
-    
+
 print(np.mean(all_scores))
 print(np.mean(all_bmk_scores))
 plt.figure(figsize=(20,12))
@@ -1165,6 +1172,6 @@ holdout_results[(holdout_results.position == position_q) &
 
 
 holdout_results['abs_error'] = holdout_results.ERROR.apply(lambda x: np.abs(x))
-holdout_results['spread'] = np.abs(holdout_results['ERROR'] - holdout_results['ESPN_ERROR']) 
-    
+holdout_results['spread'] = np.abs(holdout_results['ERROR'] - holdout_results['ESPN_ERROR'])
+
 holdout_results.sort_values('spread', ascending=False).head(20)

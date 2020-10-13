@@ -118,6 +118,35 @@ Sample: `data/weekly_players/sample_weekly.csv`
 - Generate a weekly predictive model of score for each postion. Let's do a combined model for QB, RB, WR
 
 ## Projection model
+### `PredictiveModel` class
+#### Attributes: 
+- `X_vars`: list of predictor variables
+- `y_var`: name of target variable 
+- `b_var`: name of benchmark variable 
+- `df`: full dataset containing all players/years/weeks rows and all predictor/target/benchmard/meta columns. 
+- `df_train`: training data subset for fitting model with cross-validation 
+- `df_val`: validation data subset for selecting model class 
+- `df_test`: test data subset for evaluating model performance against benchmark 
+#### Methods: 
+- `read_player_data()`
+- `read_opp_data()`
+- `calc_target()`
+- `create_nfl_features()`: wrapper for all of the featurzing helper functions 
+    - `get_cumul_stats_time_weighted()`
+    - `get_cumul_mean_stats()`
+    - `get_trend()`
+    - `defensive_ptsallow()`
+    - `weekly_player_weights()`
+- `clean_salaries()`
+- `read_salaries_data()`
+- `merge_salaries()`
+- `add_year()`: This is included in pda.py because 'Year column got lost when I called create_nfl_features() on each dataframe, so I
+am adding it back.' This method might not be necessary, but I am keeping it for now and might remove once I have a working code and 
+determine it is not needed. 
+- `read_snapcounts_data()`
+- `merge_snapcounts()`
+- `read_weather_data()`
+- `merge_weather()`
 
 ## Lineup Optimizer
 
