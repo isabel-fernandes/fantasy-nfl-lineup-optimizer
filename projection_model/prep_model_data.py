@@ -195,10 +195,38 @@ class WeeklyStatsYear():
         deltas3 = deltas3.add_prefix('per3_')
         trend_df = pd.concat([deltas, deltas2, deltas3], axis=1)
         # average prior three deltas to get trend
-        for col in stat_cols:
+        for col in globs.stat_cols:
             name = 'trend_'+col
             trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
         return trend_df
+
+    def get_cumul_mean_stats(df, weeks):
+        """Create a rolling mean for each statistic by player, by week."""
+        weeks_stats_mean = []
+        for week in weeks:
+            tmp = df[df.week <= week]
+            tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
+            tmp = tmp.add_suffix('_mean')
+            tmp['week'] = week
+            weeks_stats_mean.append(tmp)
+        cumavg_stats = pd.concat(weeks_stats_mean)
+        cumavg_stats = cumavg_stats.rename(columns={'id_mean':'id'})
+        return cumavg_stats
+
+    def get_cumul_stats_time_weighted(df, weeks):
+        """Create a rolling time-wegihted mean for each statistic by player, by week."""
+        weeks_stats_mean_wgt = []
+        for week in weeks:
+            tmp1 = df[df.week <= week]
+            mult = lambda x: np.asarray(x) * np.asarray(tmp1.week)
+            tmp = tmp1[['id']+globs.stat_cols].set_index('id').apply(mult).reset_index()
+            tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
+            tmp = tmp.add_suffix('_wgtmean')
+            tmp['week'] = week
+            weeks_stats_mean_wgt.append(tmp)
+        cumavg_stats_wgt = pd.concat(weeks_stats_mean_wgt)
+        cumavg_stats_wgt = cumavg_stats_wgt.rename(columns={'id_wgtmean':'id'})
+        return cumavg_stats_wgt
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
