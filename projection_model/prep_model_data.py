@@ -28,6 +28,20 @@ class globs():
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
 
+    # Player stats fed into the model 
+    stat_cols = [
+        'fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
+        'passing_att', 'passing_cmp', 'passing_ints', 'passing_tds', 'passer_ratio',
+        'passing_twopta', 'passing_twoptm', 'passing_yds',
+        'puntret_tds','puntret_avg', 'puntret_lng', 'puntret_lngtd', 'puntret_ret',
+        'receiving_lng', 'receiving_lngtd','receiving_rec', 'receiving_tds', 'receiving_twopta',
+        'receiving_twoptm', 'receiving_yds', 'rushing_att', 'rushing_lng',
+        'rushing_lngtd', 'rushing_tds', 'rushing_twopta', 'rushing_twoptm',
+        'rushing_yds','fantasy_points',
+        'PassRushRatio_Att','PassRushRatio_Yds','PassRushRatio_Tds','RushRecRatio_AttRec',
+        'RushRecRatio_Tds','RushRecRatio_Yds'
+    ]
+
 class RenameMap():
     def __init__(self, filepath):
         df = pd.read_csv(filepath, index_col=0)
@@ -145,7 +159,7 @@ class WeeklyStatsYear():
         missing["position_fill"] = missing[["QB", "RB", "WRTE"]].idxmax(axis=1)
         missing = missing[["id", "position_fill"]]
         #missing["position_fill"] = missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
-        missing["position_fill"] = missing["position_fill"].apply(lambda x: "WR" if x=="WRTE" else x) # Assuming all WRTE's are WR instead of dropping 
+        missing["position_fill"] = missing["position_fill"].apply(lambda x: "WR" if x=="WRTE" else x) # Assuming all WRTE's are WR instead of dropping
 
         # Impute position based on 'position_fill'
         self.df_player = self.df_player.merge(missing, how='left', on='id')
@@ -158,9 +172,12 @@ class WeeklyStatsYear():
         self.df_player['position'] = self.df_player['position'].str.replace('FB','RB')
         self.df_player = self.df_player[self.df_player['position'].isin(include_positions)]
 
-    def calc_frac_nopos(self):
-        frac = self.df_player.position.isna().sum() / len(self.df_player.position)
-        print(frac)
+    # Feature Engineering Helper Functions
+    def trim_sort(df):
+        df = df.sort_values(['id','week'])
+        df = df[globs.stat_cols+['id','week','team','position','full_name']]
+        return df
+
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
@@ -175,20 +192,16 @@ if __name__ == "__main__":
     data_2013 = WeeklyStatsYear(2018)
     data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
     data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
-    data_2013.calc_frac_nopos()
     data_2013.calc_target_PPR()
     data_2013.calc_ratios()
     data_2013.clean_positions()
-    data_2013.calc_frac_nopos()
 
     data_2017 = WeeklyStatsYear(2018)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
     data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
-    data_2017.calc_frac_nopos()
     data_2017.calc_target_PPR()
     data_2017.calc_ratios()
     data_2017.clean_positions()
-    data_2017.calc_frac_nopos()
 
     print(data_2013.df_player.position.value_counts())
     print(data_2017.df_player.position.value_counts())
