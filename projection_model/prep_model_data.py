@@ -81,16 +81,6 @@ class WeeklyStatsYear():
         }
         self.df_opp = self.df_opp.rename(columns=opp_cols_rename_dict)
 
-    def fill_positions(self):
-        self.missing = self.df_player[self.df_player.position.isna()]
-        self.missing = self.missing.groupby(["id", "full_name"], as_index=False).mean()
-        self.missing = self.missing[["id", "full_name", "passing_att", "rushing_att", "receiving_att"]]
-        self.missing.columns = ["id", "full_name", "QB", "RB", "WRTE"]
-        self.missing = self.missing[(self.missing.QB!=0) | (self.missing.RB!=0) | (self.missing.WRTE!=0)]
-        self.missing["position_fill"] = self.missing[["QB", "RB", "WRTE"]].idxmax(axis=1)
-        self.missing = self.missing[["id", "position_fill"]]
-        self.missing["position_fill"] = self.missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
-
     def calc_target(self):
         """
         Create fantasy_points (the target variable) according to a
@@ -145,9 +135,19 @@ class WeeklyStatsYear():
     def clean_positions(self):
         """
         Trim the dataset to include the four main offensive positions: QB, RB, WR, TE
-        """ 
+        """
+        # Determine position_fill for players missing positions 
+        missing = self.df_player[self.df_player.position.isna()]
+        missing = missing.groupby(["id", "full_name"], as_index=False).mean()
+        missing = missing[["id", "full_name", "passing_att", "rushing_att", "receiving_att"]]
+        missing.columns = ["id", "full_name", "QB", "RB", "WRTE"]
+        missing = missing[(missing.QB!=0) | (missing.RB!=0) | (missing.WRTE!=0)]
+        missing["position_fill"] = missing[["QB", "RB", "WRTE"]].idxmax(axis=1)
+        missing = missing[["id", "position_fill"]]
+        missing["position_fill"] = missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
+
         # Impute position based on 'position_fill'
-        self.df_player = self.df_player.merge(self.missing, how='left', on='id')
+        self.df_player = self.df_player.merge(missing, how='left', on='id')
         self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
         #self.df_player['position_fill'] = self.df_player['full_name'].apply(lambda x: fill_positions(x)) # This is left over from non-working function in old code
         self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
