@@ -5,7 +5,7 @@ from collections import defaultdict
 import pickle
 
 CURR_WEEK = 14
-YEARS = [2013,2014,2015]
+YEARS = [2018,2019]
 #YEARS = [2015]
 dir_out = "../data/"
 
@@ -52,8 +52,8 @@ def get_week(players, week):
             info.update(p.player._asdict())
         except AttributeError:
             pass
-        
-        try: 
+
+        try:
             info['team'] = p.team
             info['full_name'] = p.player.full_name
             info['birthdate'] = p.player.birthdate
@@ -64,9 +64,9 @@ def get_week(players, week):
             info['profile_url'] = p.player.profile_url
             info['last_name'] = p.player.last_name
             info['number'] = p.player.number
-        except AttributeError:  
-            print("    {} player data not available. Skipping...".format(p.name)) 
-            continue 
+        except AttributeError:
+            print("    {} player data not available. Skipping...".format(p.name))
+            continue
 
         playerstats[p.playerid] = info
     return pd.DataFrame(playerstats).T.reset_index().rename(columns={"index":"id"})
@@ -113,31 +113,32 @@ def get_opponent_stats(team_list, year):
 TEAMS = [team[0] for team in nflgame.teams] +['STL']
 TEAMS.remove('LA')
 TEAMS.remove("JAX")
-TEAMS.append("JAC") 
+TEAMS.append("JAC")
 TEAMS.remove("LAC")
-TEAMS.append("SD") 
+TEAMS.append("SD")
 
 weeks = list(range(1,18))
 
 ps = []
 for year in YEARS:
-    print("Creating Players Stats "+str(year))
-    player_stats = get_year(year, weeks).fillna(0)
-    ps.append(player_stats)
-    print("Creating Opponents Stats "+str(year))
-    opp_stats = get_opponent_stats(TEAMS, year)
-    opp_stats = opp_stats.add_prefix("opp_")
-    print("Saving to File "+str(year))
-    opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
-    player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
+    if year < 2016:
+        print("Creating Players Stats "+str(year))
+        player_stats = get_year(year, weeks).fillna(0)
+        ps.append(player_stats)
+        print("Creating Opponents Stats "+str(year))
+        opp_stats = get_opponent_stats(TEAMS, year)
+        opp_stats = opp_stats.add_prefix("opp_")
+        print("Saving to File "+str(year))
+        opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
+        player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
 
-    TEAMS_2016 = [team[0] for team in nflgame.teams]
+TEAMS_2016 = [team[0] for team in nflgame.teams]
 #TEAMS_2016.remove('JAC')
 #TEAMS_2016.append('JAX')
 TEAMS_2016.remove('STL')
-if "LAC" in TEAMS_2016: 
+if "LAC" in TEAMS_2016:
     TEAMS_2016.remove("LAC")
-    TEAMS_2016.append("SD") 
+    TEAMS_2016.append("SD")
 
 
 year = 2016
@@ -165,3 +166,13 @@ opp_stats = get_opponent_stats(TEAMS_2017, year)
 opp_stats = opp_stats.add_prefix("opp_")
 opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
 player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
+
+for year in YEARS:
+    if year > 2017:
+        print("Creating Players Stats "+str(year))
+        player_stats = get_year(year, weeks).fillna(0)
+        print("Creating Opponents Stats "+str(year))
+        opp_stats = get_opponent_stats(TEAMS_2016, year)
+        opp_stats = opp_stats.add_prefix("opp_")
+        opp_stats.to_csv(dir_out+"opp_stats_"+str(year)+".csv", index=False)
+        player_stats.to_csv(dir_out+"player_stats_"+str(year)+".csv", index=False)
