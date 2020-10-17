@@ -42,6 +42,113 @@ class globs():
         'RushRecRatio_Tds','RushRecRatio_Yds'
     ]
 
+def trim_sort(df):
+    df = df.sort_values(['id','week'])
+    df = df[globs.stat_cols+['id','week','team','position','full_name']]
+    return df
+
+def get_trend(df_in):
+    """Compute a three-week trend for each game statistic, for each player."""
+    # Drop non-ID identifier columns
+    drop_cols = ["team", "position", "full_name"]
+    groupby_cols = ["id"]
+    df = df_in[[c for c in df_in if c not in drop_cols]]
+
+    # compute 3-week and 2-week points deltas
+    deltas = df.groupby(groupby_cols).pct_change()
+    deltas = deltas.add_prefix('chg_')
+    deltas = pd.concat([df, deltas], axis=1)
+    deltas2 = deltas.groupby(groupby_cols)[deltas.columns].shift(1).fillna(0)
+    deltas3 = deltas.groupby(groupby_cols)[deltas.columns].shift(2).fillna(0)
+    deltas2 = deltas2.add_prefix('per2_')
+    deltas3 = deltas3.add_prefix('per3_')
+    trend_df = pd.concat([deltas, deltas2, deltas3], axis=1)
+    # average prior three deltas to get trend
+    for col in globs.stat_cols:
+        name = 'trend_'+col
+        trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
+    return trend_df
+
+def get_cumul_mean_stats(df, weeks):
+    """Create a rolling mean for each statistic by player, by week."""
+    weeks_stats_mean = []
+    for week in weeks:
+        tmp = df[df.week <= week]
+        tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
+        tmp = tmp.add_suffix('_mean')
+        tmp['week'] = week
+        weeks_stats_mean.append(tmp)
+    cumavg_stats = pd.concat(weeks_stats_mean)
+    cumavg_stats = cumavg_stats.rename(columns={'id_mean':'id'})
+    return cumavg_stats
+
+def get_cumul_stats_time_weighted(df, weeks):
+    """Create a rolling time-wegihted mean for each statistic by player, by week."""
+    weeks_stats_mean_wgt = []
+    for week in weeks:
+        tmp1 = df[df.week <= week]
+        mult = lambda x: np.asarray(x) * np.asarray(tmp1.week)
+        tmp = tmp1[['id']+globs.stat_cols].set_index('id').apply(mult).reset_index()
+        tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
+        tmp = tmp.add_suffix('_wgtmean')
+        tmp['week'] = week
+        weeks_stats_mean_wgt.append(tmp)
+    cumavg_stats_wgt = pd.concat(weeks_stats_mean_wgt)
+    cumavg_stats_wgt = cumavg_stats_wgt.rename(columns={'id_wgtmean':'id'})
+    return cumavg_stats_wgt
+
+def defensive_ptsallow(matchups, weeks, weighted=False):
+    """
+    Compute the mean weekly points given up by each defense to each position.
+    Parameters:
+        matchups: dataframe of matchups between offensive player, and
+                  defensive opponent.
+        weeks:    list of weeks in the season.
+        weighted: boolean. If true, compute weekly points allowed according
+                  to player-weighted fantasy points.
+    """
+    agg_col = 'fantasy_points'
+    output_name = 'defensive_matchup_allowed'
+    if weighted:
+        agg_col = 'weighted_fantasy_points'
+        output_name = 'defensive_matchup_allowed_wgt'
+    # compute weekly cumulative mean points allowed by each defense
+    defense_ranks_dfs = []
+    for week in weeks:
+        matchweek = matchups[matchups.week <= week]
+        # weekly sum of pts allowed by a given defense to each position
+        weekly_sums = matchweek.groupby(['week','defense','position'])[agg_col].sum().reset_index()
+        # season-to-date mean of weekly sums for each position
+        defense_pts_allowed = weekly_sums.groupby(['defense','position'])[agg_col].mean().reset_index()
+        defense_pts_allowed = defense_pts_allowed.rename(columns={agg_col:output_name})
+        defense_pts_allowed['week'] = week
+        defense_ranks_dfs.append(defense_pts_allowed)
+    defense_ranks = pd.concat(defense_ranks_dfs)
+    return defense_ranks
+
+def weekly_player_weights(matchups, weeks):
+    """
+    Calculate season-to-date (STD) weekly fantasy points rankings by position.
+    """
+    player_weights = []
+    for week in weeks:
+        mask = (matchups.week <= week)
+        # each player's mean fantasy points STD
+        std_mean = matchups[mask][['id','team','position','fantasy_points','defense']]
+        std_mean = std_mean.groupby(['position','id'], as_index=False).mean()
+
+        # each player's weight in a given week with respect to their position.
+        # This is the STD mean max-normalized for the current week.
+        week_max_position = std_mean.groupby('position', as_index=False).max()
+        week_max_position = week_max_position[['position','fantasy_points']]
+        week_max_position.columns = ['position','fp_max']
+        weekly_weights = std_mean.merge(week_max_position,how='left',on='position')
+        weekly_weights['player_weight'] = weekly_weights['fantasy_points'] / weekly_weights['fp_max']
+        weekly_weights['week'] = week
+        player_weights.append(weekly_weights)
+    player_weights = pd.concat(player_weights)
+    return player_weights[['id','week','position','player_weight']]
+
 class RenameMap():
     def __init__(self, filepath):
         df = pd.read_csv(filepath, index_col=0)
@@ -173,112 +280,7 @@ class WeeklyStatsYear():
         self.df_player = self.df_player[self.df_player['position'].isin(include_positions)]
 
     # Feature Engineering Helper Functions
-    def trim_sort(df):
-        df = df.sort_values(['id','week'])
-        df = df[globs.stat_cols+['id','week','team','position','full_name']]
-        return df
 
-    def get_trend(df_in):
-        """Compute a three-week trend for each game statistic, for each player."""
-        # Drop non-ID identifier columns
-        drop_cols = ["team", "position", "full_name"]
-        groupby_cols = ["id"]
-        df = df_in[[c for c in df_in if c not in drop_cols]]
-
-        # compute 3-week and 2-week points deltas
-        deltas = df.groupby(groupby_cols).pct_change()
-        deltas = deltas.add_prefix('chg_')
-        deltas = pd.concat([df, deltas], axis=1)
-        deltas2 = deltas.groupby(groupby_cols)[deltas.columns].shift(1).fillna(0)
-        deltas3 = deltas.groupby(groupby_cols)[deltas.columns].shift(2).fillna(0)
-        deltas2 = deltas2.add_prefix('per2_')
-        deltas3 = deltas3.add_prefix('per3_')
-        trend_df = pd.concat([deltas, deltas2, deltas3], axis=1)
-        # average prior three deltas to get trend
-        for col in globs.stat_cols:
-            name = 'trend_'+col
-            trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
-        return trend_df
-
-    def get_cumul_mean_stats(df, weeks):
-        """Create a rolling mean for each statistic by player, by week."""
-        weeks_stats_mean = []
-        for week in weeks:
-            tmp = df[df.week <= week]
-            tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
-            tmp = tmp.add_suffix('_mean')
-            tmp['week'] = week
-            weeks_stats_mean.append(tmp)
-        cumavg_stats = pd.concat(weeks_stats_mean)
-        cumavg_stats = cumavg_stats.rename(columns={'id_mean':'id'})
-        return cumavg_stats
-
-    def get_cumul_stats_time_weighted(df, weeks):
-        """Create a rolling time-wegihted mean for each statistic by player, by week."""
-        weeks_stats_mean_wgt = []
-        for week in weeks:
-            tmp1 = df[df.week <= week]
-            mult = lambda x: np.asarray(x) * np.asarray(tmp1.week)
-            tmp = tmp1[['id']+globs.stat_cols].set_index('id').apply(mult).reset_index()
-            tmp = tmp.groupby(['id'])[globs.stat_cols].mean().reset_index()
-            tmp = tmp.add_suffix('_wgtmean')
-            tmp['week'] = week
-            weeks_stats_mean_wgt.append(tmp)
-        cumavg_stats_wgt = pd.concat(weeks_stats_mean_wgt)
-        cumavg_stats_wgt = cumavg_stats_wgt.rename(columns={'id_wgtmean':'id'})
-        return cumavg_stats_wgt
-
-    def defensive_ptsallow(matchups, weeks, weighted=False):
-        """
-        Compute the mean weekly points given up by each defense to each position.
-        Parameters:
-            matchups: dataframe of matchups between offensive player, and
-                      defensive opponent.
-            weeks:    list of weeks in the season.
-            weighted: boolean. If true, compute weekly points allowed according
-                      to player-weighted fantasy points.
-        """
-        agg_col = 'fantasy_points'
-        output_name = 'defensive_matchup_allowed'
-        if weighted:
-            agg_col = 'weighted_fantasy_points'
-            output_name = 'defensive_matchup_allowed_wgt'
-        # compute weekly cumulative mean points allowed by each defense
-        defense_ranks_dfs = []
-        for week in weeks:
-            matchweek = matchups[matchups.week <= week]
-            # weekly sum of pts allowed by a given defense to each position
-            weekly_sums = matchweek.groupby(['week','defense','position'])[agg_col].sum().reset_index()
-            # season-to-date mean of weekly sums for each position
-            defense_pts_allowed = weekly_sums.groupby(['defense','position'])[agg_col].mean().reset_index()
-            defense_pts_allowed = defense_pts_allowed.rename(columns={agg_col:output_name})
-            defense_pts_allowed['week'] = week
-            defense_ranks_dfs.append(defense_pts_allowed)
-        defense_ranks = pd.concat(defense_ranks_dfs)
-        return defense_ranks
-
-    def weekly_player_weights(matchups, weeks):
-        """
-        Calculate season-to-date (STD) weekly fantasy points rankings by position.
-        """
-        player_weights = []
-        for week in weeks:
-            mask = (matchups.week <= week)
-            # each player's mean fantasy points STD
-            std_mean = matchups[mask][['id','team','position','fantasy_points','defense']]
-            std_mean = std_mean.groupby(['position','id'], as_index=False).mean()
-
-            # each player's weight in a given week with respect to their position.
-            # This is the STD mean max-normalized for the current week.
-            week_max_position = std_mean.groupby('position', as_index=False).max()
-            week_max_position = week_max_position[['position','fantasy_points']]
-            week_max_position.columns = ['position','fp_max']
-            weekly_weights = std_mean.merge(week_max_position,how='left',on='position')
-            weekly_weights['player_weight'] = weekly_weights['fantasy_points'] / weekly_weights['fp_max']
-            weekly_weights['week'] = week
-            player_weights.append(weekly_weights)
-        player_weights = pd.concat(player_weights)
-        return player_weights[['id','week','position','player_weight']]
 
     def create_nfl_features(self):
 
@@ -373,6 +375,7 @@ if __name__ == "__main__":
     data_2013.calc_target_PPR()
     data_2013.calc_ratios()
     data_2013.clean_positions()
+    data_2013.create_nfl_features()
 
     data_2017 = WeeklyStatsYear(2018)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
@@ -380,6 +383,7 @@ if __name__ == "__main__":
     data_2017.calc_target_PPR()
     data_2017.calc_ratios()
     data_2017.clean_positions()
+    data_2017.create_nfl_features()
 
     print(data_2013.df_player.position.value_counts())
     print(data_2017.df_player.position.value_counts())
