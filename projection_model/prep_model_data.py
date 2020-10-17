@@ -358,7 +358,7 @@ class WeeklyStatsYear():
         # final cleaning
         self.df_model = player_attributes.merge(matchups, how='right',on='id')
         self.df_model.replace([-np.inf,np.inf], 0, inplace=True)
-        self.df_model["year"] = self.year # For some reason 'year' gets dropped in this function 
+        self.df_model["year"] = self.year # For some reason 'year' gets dropped in this function
         return self.df_model
 
     def read_salaries_data(self, filepath):
@@ -383,6 +383,9 @@ class WeeklyStatsYear():
     def read_snapcounts_data(self, filepath):
         self.df_snapcounts = pd.read_csv(filepath)
 
+    def merge_snapcounts(self):
+        self.df_model = self.df_model.merge(self.df_snapcounts, on=["full_name", "week", "year"], how="left")
+
     def read_benchmark_data(self, filepath):
         self.df_benchmark = pd.read_csv(filepath)
 
@@ -405,6 +408,8 @@ if __name__ == "__main__":
     data_2017.clean_positions()
     data_2017.create_nfl_features()
     data_2017.merge_salaries()
+    #data_2017.read_snapcounts_data(os.path.join(globs.dir_snapcounts, "snapcounts_2017.csv"))
+    #data_2017.merge_snapcounts() 
 
 
     print(data_2017.df_player.position.value_counts())
