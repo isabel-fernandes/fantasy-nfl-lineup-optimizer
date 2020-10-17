@@ -2,11 +2,16 @@ name: dfs
 channels:
   - defaults
 dependencies:
-  - ca-certificates=2020.7.22=0
+  - ca-certificates=2020.10.14=0
   - certifi=2020.6.20=py38_0
+  - icu=58.2=h0a44026_3
   - libcxx=10.0.0=1
   - libedit=3.1.20191231=h1de35cc_1
   - libffi=3.3=hb1e8313_2
+  - libiconv=1.16=h1de35cc_0
+  - libxml2=2.9.10=h3b9e6c8_1
+  - libxslt=1.1.34=h83b36ba_0
+  - lxml=4.5.2=py38h63b7cb6_0
   - ncurses=6.2=h0a44026_1
   - openssl=1.1.1h=haf1e3a3_0
   - pip=20.2.3=py38_0
