@@ -14,6 +14,8 @@ import gc
 # nflgame_acquire.ipynb (scrape_nflgames.py)
 
 dir_in = "../data/"
+dir_players = "../data/player_weeks/"
+dir_opps = "../data/opp_weeks/"
 dir_fanduel = "../data/fanduel_salaries/"
 dir_nflweather = "../data/nfl_weather/"
 files = os.listdir(dir_in)
@@ -55,8 +57,8 @@ class WeeklyStats:
         df = df.reset_index()
         return df
 
-player_stats_files = [WeeklyStats(os.path.join(dir_in,f)) for f in files if "player_stats_" in f]
-opp_stats_files = [WeeklyStats(os.path.join(dir_in,f)) for f in files if "opp_stats_" in f]
+player_stats_files = [WeeklyStats(os.path.join(dir_players,f)) for f in os.listdir(dir_players)]
+opp_stats_files = [WeeklyStats(os.path.join(dir_opps,f)) for f in os.listdir(dir_opps)]
 
 player_dfs = {}
 for pfile in player_stats_files:
