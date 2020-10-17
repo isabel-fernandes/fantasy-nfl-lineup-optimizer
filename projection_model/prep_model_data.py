@@ -23,4 +23,14 @@ class globs():
     dir_opp = "./data/opp_weeks/"
     dir_salaries = "./data/fanduel_salaries/"
     dir_weather = "./data/nfl_weather/"
+
+class WeeklyStatsYear():
+    """
+    This class is holds a year's worth of weekly stats. The stats stored in This
+    class store all of the variable inputs (X's) as well as the targets (y's),
+    and in some cases, the bench mark (y_bench's) that are fed into the ML
+    prediction model.
+    """
+    def __init__(self, year):
+        self.year = year
     
