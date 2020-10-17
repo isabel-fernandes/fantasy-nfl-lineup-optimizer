@@ -24,12 +24,17 @@ class globs():
     dir_salaries = "../data/fanduel_salaries/"
     dir_weather = "../data/nfl_weather/"
     dir_snapcounts = "../data/snapcounts/"
-    dir_benchmark = "../data/fanduel_projections/"
+    #dir_benchmark = "../data/fanduel_projections/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
     file_weather_rename_map = "../meta_data/weather_team_rename_map.csv"
 
+    file_opp = "opp_stats_{}.csv"
+    file_player = "player_stats_{}.csv"
+    file_salaries = "fd_salaries_{}.csv"
+
     include_positions = ['QB', 'TE', 'WR', 'RB']
+    YEARS = [2013,2014,2015,2016,2017,2018,2019]
 
     # Player stats fed into the model
     stat_cols = [
@@ -417,19 +422,29 @@ class WeeklyStatsYear():
     def merge_weather(self):
         self.df_model = self.df_model.merge(self.df_weather, on=["team", "week", "year"], how="left")
 
-    def read_benchmark_data(self, filepath):
-        self.df_benchmark = pd.read_csv(filepath)
+def main():
+    for year in globs.YEARS:
+        print("Processing {}...".format(year))
+        if "data" in locals():
+            del data
+        data = WeeklyStatsYear(year)
+        data.read_opp_data(os.path.join(globs.dir_opp, globs.file_opp.format(year)))
+        data.read_player_data(os.path.join(globs.dir_players, globs.file_player.format(year)))
+        data.read_salaries_data(os.path.join(globs.dir_salaries, globs.file_salaries.format(year)))
+        data.calc_target_PPR()
+        data.calc_ratios()
+        data.clean_positions()
+        data.create_nfl_features()
+        data.merge_salaries()
+        # data.read_snapcounts_data(os.path.join(globs.dir_snapcounts, file_snapcounts.format(year)))
+        # data.merge_snapcounts()
+        data.read_weather_data(globs.dir_weather)
+        data.merge_weather()
+
 
 if __name__ == "__main__":
-    #data_2013 = WeeklyStatsYear(2018)
-    #data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
-    #data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
-    #data_2013.calc_target_PPR()
-    #data_2013.calc_ratios()
-    #data_2013.clean_positions()
-    #data_2013.create_nfl_features()
-    #print(data_2013.df_player.position.value_counts())
-
+    main()
+    '''
     data_2017 = WeeklyStatsYear(2017)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
     data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
@@ -443,6 +458,4 @@ if __name__ == "__main__":
     #data_2017.merge_snapcounts()
     data_2017.read_weather_data(globs.dir_weather)
     data_2017.merge_weather()
-
-
-    print(data_2017.df_player.position.value_counts())
+    '''
