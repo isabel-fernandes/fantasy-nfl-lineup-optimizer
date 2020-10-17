@@ -91,6 +91,59 @@ class WeeklyStatsYear():
         self.missing = self.missing[["id", "position_fill"]]
         self.missing["position_fill"] = self.missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
 
+    def calc_target(self):
+        """
+        Create fantasy_points (the target variable) according to a
+        standard scoring regime
+        """
+        self.df_player['fantasy_points'] = (self.df_player['passing_tds'] * 4) +\
+        (self.df_player['passing_yds'] * 0.04) +\
+        (self.df_player['passing_twoptm'] * 2) +\
+        (self.df_player['passing_ints'] * -2) +\
+        (self.df_player['rushing_tds'] * 6) +\
+        (self.df_player['rushing_yds'] * 0.1) +\
+        (self.df_player['rushing_twoptm'] * 2) +\
+        (self.df_player['receiving_tds'] * 6) +\
+        (self.df_player['receiving_yds'] * 0.1) +\
+        (self.df_player['receiving_twoptm'] * 2) +\
+        (self.df_player['kickret_tds'] * 6) +\
+        (self.df_player['puntret_tds'] * 6) +\
+        (self.df_player['fumbles_lost'] * -2)
+
+    def calc_target_PPR(self):
+        """
+        Create fantasy_poiints (the target variable) according to a PPR scoring
+        regime.
+        """ 
+        self.df_player['fantasy_points'] = (self.df_player['passing_tds'] * 4) +\
+        (self.df_player['passing_yds'] * 0.04) +\
+        (self.df_player['passing_twoptm'] * 2) +\
+        (self.df_player['passing_ints'] * -2) +\
+        (self.df_player['rushing_tds'] * 6) +\
+        (self.df_player['rushing_yds'] * 0.1) +\
+        (self.df_player['rushing_twoptm'] * 2) +\
+        (self.df_player['receiving_tds'] * 6) +\
+        (self.df_player['receiving_yds'] * 0.1) +\
+        (self.df_player['receiving_twoptm'] * 2) +\
+        (self.df_player['kickret_tds'] * 6) +\
+        (self.df_player['puntret_tds'] * 6) +\
+        (self.df_player['fumbles_lost'] * -2) +\
+        (self.df_player['receiving_rec']) # Add in the 1 point per reception
+
+    def calc_ratios(self):
+        """
+        Create pass/rus/reception ratios to be included in feature set for model.
+        """
+        self.df_player['passer_ratio'] = self.df_player['passing_cmp']/self.df_player['passing_att']
+        self.df_player['PassRushRatio_Att'] = self.df_player['rushing_att'] / self.df_player['passing_att']
+        self.df_player['PassRushRatio_Yds'] = self.df_player['rushing_yds'] / self.df_player['passing_yds']
+        self.df_player['PassRushRatio_Tds'] = self.df_player['rushing_tds'] / self.df_player['passing_tds']
+        self.df_player['RushRecRatio_AttRec'] = self.df_player['rushing_att'] / self.df_player['receiving_rec']
+        self.df_player['RushRecRatio_Tds'] = self.df_player['rushing_tds'] / self.df_player['receiving_tds']
+        self.df_player['RushRecRatio_Yds'] = self.df_player['rushing_yds'] / self.df_player['receiving_yds']
+
+
+
     def calc_frac_nopos(self):
         frac = self.df_player.position.isna().sum() / len(self.df_player.position)
         print(frac)
