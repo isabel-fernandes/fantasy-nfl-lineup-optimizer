@@ -28,6 +28,8 @@ class globs():
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
 
+    include_positions = ['QB', 'TE', 'WR', 'RB']
+
     # Player stats fed into the model
     stat_cols = [
         'fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
@@ -275,9 +277,8 @@ class WeeklyStatsYear():
         self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
 
         # Trim dataset to include_positions
-        include_positions = ['QB', 'TE', 'WR', 'RB']
         self.df_player['position'] = self.df_player['position'].str.replace('FB','RB')
-        self.df_player = self.df_player[self.df_player['position'].isin(include_positions)]
+        self.df_player = self.df_player[self.df_player['position'].isin(globs.include_positions)]
 
     # Feature Engineering Helper Functions
 
@@ -357,10 +358,27 @@ class WeeklyStatsYear():
         # final cleaning
         self.df_model = player_attributes.merge(matchups, how='right',on='id')
         self.df_model.replace([-np.inf,np.inf], 0, inplace=True)
+        self.df_model["year"] = self.year # For some reason 'year' gets dropped in this function 
         return self.df_model
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
+        self.df_salaries['FirstName'] = self.df_salaries['FirstName'].str.strip()
+        self.df_salaries['LastName'] = self.df_salaries['LastName'].str.strip()
+        self.df_salaries['full_name'] = self.df_salaries['LastName']+' '+self.df_salaries['FirstName']
+        self.df_salaries = self.df_salaries[self.df_salaries.Pos.isin(globs.include_positions)].fillna(0)
+        self.df_salaries = self.df_salaries[['Week','Team','full_name','fd_points','fd_salary']]
+        self.df_salaries.columns = ['week','team','full_name','fd_points','fd_salary']
+        self.df_salaries['week'] = pd.to_numeric(self.df_salaries['week'])
+        self.df_salaries['fd_points'] = pd.to_numeric(self.df_salaries['fd_points'])
+        self.df_salaries['fd_salary'] = pd.to_numeric(self.df_salaries['fd_salary'])
+        self.df_salaries["team"] = self.df_salaries["team"].str.upper()
+        team_rename_map = RenameMap(globs.file_team_rename_map).rename_map
+        self.df_salaries["team"] = self.df_salaries["team"].replace(team_rename_map)
+
+    def merge_salaries(self):
+        self.df_model = self.df_model.merge(self.df_salaries, on=["week","full_name","team"], how="left")
+        self.df_model = self.df_model.fillna(0)
 
     def read_snapcounts_data(self, filepath):
         self.df_snapcounts = pd.read_csv(filepath)
@@ -369,21 +387,24 @@ class WeeklyStatsYear():
         self.df_benchmark = pd.read_csv(filepath)
 
 if __name__ == "__main__":
-    data_2013 = WeeklyStatsYear(2018)
-    data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
-    data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
-    data_2013.calc_target_PPR()
-    data_2013.calc_ratios()
-    data_2013.clean_positions()
-    data_2013.create_nfl_features()
+    #data_2013 = WeeklyStatsYear(2018)
+    #data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
+    #data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
+    #data_2013.calc_target_PPR()
+    #data_2013.calc_ratios()
+    #data_2013.clean_positions()
+    #data_2013.create_nfl_features()
+    #print(data_2013.df_player.position.value_counts())
 
-    data_2017 = WeeklyStatsYear(2018)
+    data_2017 = WeeklyStatsYear(2017)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
     data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
+    data_2017.read_salaries_data(os.path.join(globs.dir_salaries, "fd_salaries_2017.csv"))
     data_2017.calc_target_PPR()
     data_2017.calc_ratios()
     data_2017.clean_positions()
     data_2017.create_nfl_features()
+    data_2017.merge_salaries()
 
-    print(data_2013.df_player.position.value_counts())
+
     print(data_2017.df_player.position.value_counts())
