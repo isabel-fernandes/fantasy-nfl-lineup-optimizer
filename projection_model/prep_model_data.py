@@ -114,7 +114,7 @@ class WeeklyStatsYear():
         """
         Create fantasy_poiints (the target variable) according to a PPR scoring
         regime.
-        """ 
+        """
         self.df_player['fantasy_points'] = (self.df_player['passing_tds'] * 4) +\
         (self.df_player['passing_yds'] * 0.04) +\
         (self.df_player['passing_twoptm'] * 2) +\
@@ -142,7 +142,20 @@ class WeeklyStatsYear():
         self.df_player['RushRecRatio_Tds'] = self.df_player['rushing_tds'] / self.df_player['receiving_tds']
         self.df_player['RushRecRatio_Yds'] = self.df_player['rushing_yds'] / self.df_player['receiving_yds']
 
+    def clean_positions(self):
+        """
+        Trim the dataset to include the four main offensive positions: QB, RB, WR, TE
+        """ 
+        # Impute position based on 'position_fill'
+        self.df_player = self.df_player.merge(self.missing, how='left', on='id')
+        self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
+        #self.df_player['position_fill'] = self.df_player['full_name'].apply(lambda x: fill_positions(x)) # This is left over from non-working function in old code
+        self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
 
+        # Trim dataset to include_positions
+        include_positions = ['QB', 'TE', 'WR', 'RB']
+        self.df_player['position'] = self.df_player['position'].str.replace('FB','RB')
+        self.df_player = self.df_player[self.df_player['position'].isin(include_positions)]
 
     def calc_frac_nopos(self):
         frac = self.df_player.position.isna().sum() / len(self.df_player.position)
