@@ -79,7 +79,21 @@ class WeeklyStatsYear():
             "opp_pos_time": "opp_pos_time",
             "year": "year"
         }
-        self.df_opp = self.df_opp.rename(columns=opp_cols_rename_dict) 
+        self.df_opp = self.df_opp.rename(columns=opp_cols_rename_dict)
+
+    def fill_positions(self):
+        self.missing = self.df_player[self.df_player.position.isna()]
+        self.missing = self.missing.groupby(["id", "full_name"], as_index=False).mean()
+        self.missing = self.missing[["id", "full_name", "passing_att", "rushing_att", "receiving_att"]]
+        self.missing.columns = ["id", "full_name", "QB", "RB", "WRTE"]
+        self.missing = self.missing[(self.missing.QB!=0) | (self.missing.RB!=0) | (self.missing.WRTE!=0)]
+        self.missing["position_fill"] = self.missing[["QB", "RB", "WRTE"]].idxmax(axis=1)
+        self.missing = self.missing[["id", "position_fill"]]
+        self.missing["position_fill"] = self.missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
+
+    def calc_frac_nopos(self):
+        frac = self.df_player.position.isna().sum() / len(self.df_player.position)
+        print(frac)
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
@@ -96,3 +110,9 @@ if __name__ == "__main__":
     data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
     print(data_2013.df_opp.head())
     print(data_2013.df_player.head())
+    data_2013.calc_frac_nopos()
+
+    data_2017 = WeeklyStatsYear(2018)
+    data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
+    data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
+    data_2017.calc_frac_nopos()
