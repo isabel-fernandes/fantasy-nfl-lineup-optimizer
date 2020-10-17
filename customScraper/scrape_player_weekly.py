@@ -119,6 +119,6 @@ def makeCSV(filtered_player_weekly, name):
         fc.writerows(filtered_player_weekly)
 
 
-raw_players_weekly_data = getRawData(2, 2020)
+raw_players_weekly_data = getRawData(6, 2019)
 player_Weekly_Data = filterData(raw_players_weekly_data)
 makeCSV(player_Weekly_Data, 'player_weekly_data.csv')
