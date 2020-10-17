@@ -191,29 +191,12 @@ def trim_sort(df):
     return df
 
 def get_trend(df_in):
-
     """Compute a three-week trend for each game statistic, for each player."""
     # Drop non-ID identifier columns
     drop_cols = ["team", "position", "full_name"]
     groupby_cols = ["id"]
     df = df_in[[c for c in df_in if c not in drop_cols]]
 
-    '''
-    # compute 3-week and 2-week points deltas
-    deltas = df.groupby(['id']).pct_change()
-    deltas = deltas.add_prefix('chg_')
-    deltas = pd.concat([df, deltas], axis=1)
-    deltas2 = deltas.groupby(['id'])[deltas.columns].shift(1).fillna(0)
-    deltas3 = deltas.groupby(['id'])[deltas.columns].shift(2).fillna(0)
-    deltas2 = deltas2.add_prefix('per2_')
-    deltas3 = deltas3.add_prefix('per3_')
-    trend_df = pd.concat([deltas, deltas2, deltas3], axis=1)
-    # average prior three deltas to get trend
-    for col in stat_cols:
-        name = 'trend_'+col
-        trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
-    return trend_df
-    '''
     # compute 3-week and 2-week points deltas
     deltas = df.groupby(groupby_cols).pct_change()
     deltas = deltas.add_prefix('chg_')
@@ -228,7 +211,6 @@ def get_trend(df_in):
         name = 'trend_'+col
         trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
     return trend_df
-
 
 def get_cumul_mean_stats(df, weeks):
 

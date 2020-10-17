@@ -28,7 +28,7 @@ class globs():
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
 
-    # Player stats fed into the model 
+    # Player stats fed into the model
     stat_cols = [
         'fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
         'passing_att', 'passing_cmp', 'passing_ints', 'passing_tds', 'passer_ratio',
@@ -178,6 +178,27 @@ class WeeklyStatsYear():
         df = df[globs.stat_cols+['id','week','team','position','full_name']]
         return df
 
+    def get_trend(df_in):
+        """Compute a three-week trend for each game statistic, for each player."""
+        # Drop non-ID identifier columns
+        drop_cols = ["team", "position", "full_name"]
+        groupby_cols = ["id"]
+        df = df_in[[c for c in df_in if c not in drop_cols]]
+
+        # compute 3-week and 2-week points deltas
+        deltas = df.groupby(groupby_cols).pct_change()
+        deltas = deltas.add_prefix('chg_')
+        deltas = pd.concat([df, deltas], axis=1)
+        deltas2 = deltas.groupby(groupby_cols)[deltas.columns].shift(1).fillna(0)
+        deltas3 = deltas.groupby(groupby_cols)[deltas.columns].shift(2).fillna(0)
+        deltas2 = deltas2.add_prefix('per2_')
+        deltas3 = deltas3.add_prefix('per3_')
+        trend_df = pd.concat([deltas, deltas2, deltas3], axis=1)
+        # average prior three deltas to get trend
+        for col in stat_cols:
+            name = 'trend_'+col
+            trend_df[name] = trend_df[['chg_'+col,'per2_chg_'+col,'per3_chg_'+col]].mean(axis=1).fillna(0)
+        return trend_df
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
