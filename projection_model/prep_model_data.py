@@ -23,6 +23,8 @@ class globs():
     dir_opp = "./data/opp_weeks/"
     dir_salaries = "./data/fanduel_salaries/"
     dir_weather = "./data/nfl_weather/"
+    dir_snapcounts = "./data/snapcounts/"
+    dir_benchmark = "./data/fanduel_projections/" 
 
 class WeeklyStatsYear():
     """
@@ -33,4 +35,18 @@ class WeeklyStatsYear():
     """
     def __init__(self, year):
         self.year = year
-    
+
+    def read_player_data(filepath):
+        self.df_player = pd.read_csv(filepath)
+
+    def read_opp_data(filepath):
+        self.df_opp = pd.read_csv(filepath)
+
+    def read_salaries_data(filepath):
+        self.df_salaries = pd.read_csv(filepath)
+
+    def read_snapcounts_data(filepath):
+        self.df_snapcounts = pd.read_csv(filepath)
+
+    def read_benchmark_data(filepath):
+        self.df_benchmark = pd.read_csv(filepath)
