@@ -61,6 +61,25 @@ class WeeklyStatsYear():
             del self.df_opp["position_fill"]
         self.df_opp["year"] = self.year
         self.df_opp = self.df_opp.reset_index()
+        opp_cols_rename_dict = {
+            "opp_week": "week",
+            "opp_TEAM": "offense",
+            "opp_OPP": "defense",
+            "opp_opp_points": "opp_points",
+            "opp_first_downs": "opp_first_downs",
+            "opp_total_yds": "opp_total_yds",
+            "opp_passing_yds": "opp_passing_yds",
+            "opp_rushing_yds": "opp_rushing_yds",
+            "opp_penalty_yds": "opp_penalty_yds",
+            "opp_penalty_cnt": "opp_penalty_cnt",
+            "opp_turnovers": "opp_turnovers",
+            "opp_punt_cnt": "opp_punt_cnt",
+            "opp_punt_yds": "opp_punt_yds",
+            "opp_punt_avg": "opp_punt_avg",
+            "opp_pos_time": "opp_pos_time",
+            "year": "year"
+        }
+        self.df_opp = self.df_opp.rename(columns=opp_cols_rename_dict) 
 
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
@@ -76,4 +95,4 @@ if __name__ == "__main__":
     data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
     data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
     print(data_2013.df_opp.head())
-    print(data_2013.df_player.head()) 
+    print(data_2013.df_player.head())
