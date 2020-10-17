@@ -25,6 +25,7 @@ class globs():
     dir_weather = "../data/nfl_weather/"
     dir_snapcounts = "../data/snapcounts/"
     #dir_benchmark = "../data/fanduel_projections/"
+    dir_model = "../data/model_data/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
     file_weather_rename_map = "../meta_data/weather_team_rename_map.csv"
@@ -32,6 +33,8 @@ class globs():
     file_opp = "opp_stats_{}.csv"
     file_player = "player_stats_{}.csv"
     file_salaries = "fd_salaries_{}.csv"
+
+    file_model_data = "df_model_{}.csv"
 
     include_positions = ['QB', 'TE', 'WR', 'RB']
     YEARS = [2013,2014,2015,2016,2017,2018,2019]
@@ -422,6 +425,10 @@ class WeeklyStatsYear():
     def merge_weather(self):
         self.df_model = self.df_model.merge(self.df_weather, on=["team", "week", "year"], how="left")
 
+    def export_model_data(self):
+        savepath = os.path.join(globs.dir_model, globs.file_model_data.format(self.year))
+        self.df_model.to_csv(savepath, index=False)
+
 def main():
     for year in globs.YEARS:
         print("Processing {}...".format(year))
@@ -440,6 +447,7 @@ def main():
         # data.merge_snapcounts()
         data.read_weather_data(globs.dir_weather)
         data.merge_weather()
+        data.export_model_data()
 
 
 if __name__ == "__main__":
