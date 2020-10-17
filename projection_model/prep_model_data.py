@@ -19,19 +19,19 @@ from datetime import datetime
 import gc
 
 class globs():
-    dir_players = "./data/player_weeks/"
-    dir_opp = "./data/opp_weeks/"
-    dir_salaries = "./data/fanduel_salaries/"
-    dir_weather = "./data/nfl_weather/"
-    dir_snapcounts = "./data/snapcounts/"
-    dir_benchmark = "./data/fanduel_projections/"
+    dir_players = "../data/player_weeks/"
+    dir_opp = "../data/opp_weeks/"
+    dir_salaries = "../data/fanduel_salaries/"
+    dir_weather = "../data/nfl_weather/"
+    dir_snapcounts = "../data/snapcounts/"
+    dir_benchmark = "../data/fanduel_projections/"
 
-    file_team_rename_map = "./meta_data/team_rename_map.csv"
+    file_team_rename_map = "../meta_data/team_rename_map.csv"
 
 class RenameMap():
     def __init__(self, filepath):
         df = pd.read_csv(filepath, index_col=0)
-        self.rename_map = df.to_dict()[df.columns[0]] 
+        self.rename_map = df.to_dict()[df.columns[0]]
 
 class WeeklyStatsYear():
     """
@@ -43,17 +43,30 @@ class WeeklyStatsYear():
     def __init__(self, year):
         self.year = year
 
-    def read_player_data(filepath):
+    def read_player_data(self, filepath):
         self.df_player = pd.read_csv(filepath)
 
-    def read_opp_data(filepath):
+    def read_opp_data(self, filepath):
         self.df_opp = pd.read_csv(filepath)
+        team_rename_map = RenameMap(globs.file_team_rename_map).rename_map
+        self.df_opp["opp_TEAM"] = self.df_opp["opp_TEAM"].replace(team_rename_map)
+        self.df_opp["opp_OPP"] = self.df_opp["opp_OPP"].replace(team_rename_map)
+        if "position_fill" in self.df_opp:
+            del self.df_opp["position_fill"]
+        self.df_opp["year"] = self.year
+        self.df_opp = self.df_opp.rename(columns={"name": "full_name"})
+        self.df_opp = self.df_opp.reset_index()
 
-    def read_salaries_data(filepath):
+    def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
 
-    def read_snapcounts_data(filepath):
+    def read_snapcounts_data(self, filepath):
         self.df_snapcounts = pd.read_csv(filepath)
 
-    def read_benchmark_data(filepath):
+    def read_benchmark_data(self, filepath):
         self.df_benchmark = pd.read_csv(filepath)
+
+if __name__ == "__main__":
+    data_2013 = WeeklyStatsYear(2013)
+    data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
+    print(data_2013.df_opp.head())
