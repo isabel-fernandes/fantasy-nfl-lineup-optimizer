@@ -459,6 +459,24 @@ class WeeklyStatsYear():
         savepath = os.path.join(globs.dir_model, globs.file_model_data.format(self.year))
         self.df_model.to_csv(savepath, index=False)
 
+class TrainDataset():
+    def __init__(self, df_model, pos, years):
+        self.df_model = df_model
+        self.pos = pos
+        self.years = years
+
+class ValDataset():
+    def __init__(self, df_model, pos, years):
+        self.df_model = df_model
+        self.pos = pos
+        self.years = years
+
+class TestDataset():
+    def __init__(self, df_model, pos, years, benchmark_col):
+        self.df_model = df_model
+        self.pos = pos
+        self.years = years
+        self.benchmark_col = benchmark_col 
 
 def main():
     for year in globs.YEARS:
@@ -474,7 +492,7 @@ def main():
             globs.dir_nflweather
         )
         data.prep_model_data()
-        data.export_model_data() 
+        data.export_model_data()
 
 if __name__ == "__main__":
     main()
