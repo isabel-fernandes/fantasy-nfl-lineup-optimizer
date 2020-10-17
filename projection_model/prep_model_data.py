@@ -45,6 +45,12 @@ class WeeklyStatsYear():
 
     def read_player_data(self, filepath):
         self.df_player = pd.read_csv(filepath)
+        team_rename_map = RenameMap(globs.file_team_rename_map).rename_map
+        self.df_player["team"] = self.df_player["team"].replace(team_rename_map)
+        if "position_fill" in self.df_player:
+            del self.df_player["position_fill"]
+        self.df_player = self.df_player.rename(columns={"name": "full_name"})
+        self.df_player = self.df_player.reset_index()
 
     def read_opp_data(self, filepath):
         self.df_opp = pd.read_csv(filepath)
@@ -54,7 +60,6 @@ class WeeklyStatsYear():
         if "position_fill" in self.df_opp:
             del self.df_opp["position_fill"]
         self.df_opp["year"] = self.year
-        self.df_opp = self.df_opp.rename(columns={"name": "full_name"})
         self.df_opp = self.df_opp.reset_index()
 
     def read_salaries_data(self, filepath):
@@ -69,4 +74,6 @@ class WeeklyStatsYear():
 if __name__ == "__main__":
     data_2013 = WeeklyStatsYear(2013)
     data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
+    data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
     print(data_2013.df_opp.head())
+    print(data_2013.df_player.head()) 
