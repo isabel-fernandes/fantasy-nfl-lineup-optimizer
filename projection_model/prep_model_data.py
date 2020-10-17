@@ -136,15 +136,16 @@ class WeeklyStatsYear():
         """
         Trim the dataset to include the four main offensive positions: QB, RB, WR, TE
         """
-        # Determine position_fill for players missing positions 
+        # Determine position_fill for players missing positions
         missing = self.df_player[self.df_player.position.isna()]
         missing = missing.groupby(["id", "full_name"], as_index=False).mean()
-        missing = missing[["id", "full_name", "passing_att", "rushing_att", "receiving_att"]]
+        missing = missing[["id", "full_name", "passing_att", "rushing_att", "receiving_rec"]]
         missing.columns = ["id", "full_name", "QB", "RB", "WRTE"]
         missing = missing[(missing.QB!=0) | (missing.RB!=0) | (missing.WRTE!=0)]
         missing["position_fill"] = missing[["QB", "RB", "WRTE"]].idxmax(axis=1)
         missing = missing[["id", "position_fill"]]
-        missing["position_fill"] = missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
+        #missing["position_fill"] = missing["position_fill"].apply(lambda x: np.nan if x=="WRTE" else x)
+        missing["position_fill"] = missing["position_fill"].apply(lambda x: "WR" if x=="WRTE" else x) # Assuming all WRTE's are WR instead of dropping 
 
         # Impute position based on 'position_fill'
         self.df_player = self.df_player.merge(missing, how='left', on='id')
@@ -171,14 +172,23 @@ class WeeklyStatsYear():
         self.df_benchmark = pd.read_csv(filepath)
 
 if __name__ == "__main__":
-    data_2013 = WeeklyStatsYear(2013)
+    data_2013 = WeeklyStatsYear(2018)
     data_2013.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2013.csv"))
     data_2013.read_player_data(os.path.join(globs.dir_players, "player_stats_2013.csv"))
-    print(data_2013.df_opp.head())
-    print(data_2013.df_player.head())
+    data_2013.calc_frac_nopos()
+    data_2013.calc_target_PPR()
+    data_2013.calc_ratios()
+    data_2013.clean_positions()
     data_2013.calc_frac_nopos()
 
     data_2017 = WeeklyStatsYear(2018)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
     data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
     data_2017.calc_frac_nopos()
+    data_2017.calc_target_PPR()
+    data_2017.calc_ratios()
+    data_2017.clean_positions()
+    data_2017.calc_frac_nopos()
+
+    print(data_2013.df_player.position.value_counts())
+    print(data_2017.df_player.position.value_counts())
