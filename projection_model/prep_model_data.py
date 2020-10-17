@@ -228,6 +228,135 @@ class WeeklyStatsYear():
         cumavg_stats_wgt = cumavg_stats_wgt.rename(columns={'id_wgtmean':'id'})
         return cumavg_stats_wgt
 
+    def defensive_ptsallow(matchups, weeks, weighted=False):
+        """
+        Compute the mean weekly points given up by each defense to each position.
+        Parameters:
+            matchups: dataframe of matchups between offensive player, and
+                      defensive opponent.
+            weeks:    list of weeks in the season.
+            weighted: boolean. If true, compute weekly points allowed according
+                      to player-weighted fantasy points.
+        """
+        agg_col = 'fantasy_points'
+        output_name = 'defensive_matchup_allowed'
+        if weighted:
+            agg_col = 'weighted_fantasy_points'
+            output_name = 'defensive_matchup_allowed_wgt'
+        # compute weekly cumulative mean points allowed by each defense
+        defense_ranks_dfs = []
+        for week in weeks:
+            matchweek = matchups[matchups.week <= week]
+            # weekly sum of pts allowed by a given defense to each position
+            weekly_sums = matchweek.groupby(['week','defense','position'])[agg_col].sum().reset_index()
+            # season-to-date mean of weekly sums for each position
+            defense_pts_allowed = weekly_sums.groupby(['defense','position'])[agg_col].mean().reset_index()
+            defense_pts_allowed = defense_pts_allowed.rename(columns={agg_col:output_name})
+            defense_pts_allowed['week'] = week
+            defense_ranks_dfs.append(defense_pts_allowed)
+        defense_ranks = pd.concat(defense_ranks_dfs)
+        return defense_ranks
+
+    def weekly_player_weights(matchups, weeks):
+        """
+        Calculate season-to-date (STD) weekly fantasy points rankings by position.
+        """
+        player_weights = []
+        for week in weeks:
+            mask = (matchups.week <= week)
+            # each player's mean fantasy points STD
+            std_mean = matchups[mask][['id','team','position','fantasy_points','defense']]
+            std_mean = std_mean.groupby(['position','id'], as_index=False).mean()
+
+            # each player's weight in a given week with respect to their position.
+            # This is the STD mean max-normalized for the current week.
+            week_max_position = std_mean.groupby('position', as_index=False).max()
+            week_max_position = week_max_position[['position','fantasy_points']]
+            week_max_position.columns = ['position','fp_max']
+            weekly_weights = std_mean.merge(week_max_position,how='left',on='position')
+            weekly_weights['player_weight'] = weekly_weights['fantasy_points'] / weekly_weights['fp_max']
+            weekly_weights['week'] = week
+            player_weights.append(weekly_weights)
+        player_weights = pd.concat(player_weights)
+        return player_weights[['id','week','position','player_weight']]
+
+    def create_nfl_features(self):
+
+        """Wrapper function that calls all helpers to create custom player and team
+           defense stats. This function will return a new dataframe that has merged
+           all of the custom stats described in the helper functions for each player.
+
+           Parameters:
+                       self.df_player: game summary actuals for each player weekly
+                       self.df_opp:    matchups for each game (can substitute with
+                                          a schedule with player_id, offense, defense, week)"""
+
+        player_stats_trimmed = trim_sort(self.df_player)
+        weeks = sorted(player_stats_trimmed.week.unique().tolist())
+
+        # create offensive player stats
+        trend_df         = get_trend(player_stats_trimmed)
+        cumavg_stats     = get_cumul_mean_stats(player_stats_trimmed, weeks)
+        cumavg_stats_wgt = get_cumul_stats_time_weighted(player_stats_trimmed, weeks)
+
+        # create matchups and defensive opponent stats
+        matchup_cols = ['id', 'week', 'team','position', 'full_name', 'offense', 'defense','fantasy_points']
+        sched             = self.df_opp[['offense','defense','week']]
+        matchups          = player_stats_trimmed.merge(sched, how='left',
+                                                       left_on=['week','team'],
+                                                       right_on=['week','offense'])[matchup_cols]
+        defense_ranks     = defensive_ptsallow(matchups, weeks)
+        player_weights    = weekly_player_weights(matchups, weeks)
+        player_weights['inverse'] = 1/player_weights.player_weight
+        matchups_wgts     = matchups.merge(player_weights, how='left', on=['id','week','position'])
+        matchups_wgts['weighted_fantasy_points'] = matchups_wgts['fantasy_points'] * matchups_wgts['inverse']
+        defense_ranks_wgt = defensive_ptsallow(matchups_wgts, weeks, weighted=True)
+
+        ## merge features
+
+        # shift target variable, week, and defensive opponent
+        matchups['target_defense'] = matchups.sort_values(['id','week']).groupby('id')['defense'].shift(-1)
+        matchups['target'] = matchups.sort_values(['id','week']).groupby('id')['fantasy_points'].shift(-1)
+        matchups['target_week'] = matchups.sort_values(['id','week']).groupby('id')['week'].shift(-1)
+
+        # drop week 1
+        matchups.dropna(inplace=True)
+
+        ## fill in zeros for players with missing historical stats
+        #matchups.fillna(0, inplace=True)
+
+        # merge player weights to player performances
+        matchups = matchups.merge(player_weights, on=['id','week','position'])
+
+        # merge defense rankings to player performances
+        defense_ranks_all = defense_ranks.merge(defense_ranks_wgt, on=['defense', 'position', 'week'])
+        defense_ranks_all = defense_ranks_all.rename(columns={'defense':'target_defense'})
+        matchups = matchups.merge(defense_ranks_all, how='left', on=['target_defense','position','week']).dropna()
+
+        # merge trend, average, and weighted avg stats to player performances
+        avgs = cumavg_stats.merge(cumavg_stats_wgt,how='inner',on=['id','week'])
+        matchups = matchups.merge(avgs, how='left', on=['id','week'])
+        trend_cols = ['id','week']+[col for col in trend_df if col not in matchups.columns]
+        td = trend_df[trend_cols]
+        matchups = matchups.merge(td, how='inner', on=['id','week'])
+        for col in trend_df.columns:
+            matchups[col].fillna(0, inplace=True)
+
+        # create extra player attributes and merge to make model-ready df
+        attribs = ['id','birthdate','years_pro','height','weight','position','profile_url','last_name','number']
+        #player_attributes = self.df_player[attribs]
+        player_attributes = self.df_player[[c for c in self.df_player if c in attribs]]
+        player_attributes.drop_duplicates(['id'],inplace=True)
+        player_attributes['birthdate'] = pd.to_datetime(player_attributes['birthdate'])
+        player_attributes['age'] = player_attributes['birthdate'].apply(lambda x: (datetime.today() - x).days/365)
+        position_dummies = pd.get_dummies(player_attributes['position'])
+        player_attributes = pd.concat([position_dummies, player_attributes], axis=1).drop(['position'],axis=1)
+
+        # final cleaning
+        self.df_model = player_attributes.merge(matchups, how='right',on='id')
+        self.df_model.replace([-np.inf,np.inf], 0, inplace=True)
+        return self.df_model
+
     def read_salaries_data(self, filepath):
         self.df_salaries = pd.read_csv(filepath)
 
