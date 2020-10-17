@@ -27,6 +27,7 @@ class globs():
     dir_benchmark = "../data/fanduel_projections/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
+    file_weather_rename_map = "../meta_data/weather_team_rename_map.csv"
 
     include_positions = ['QB', 'TE', 'WR', 'RB']
 
@@ -386,6 +387,36 @@ class WeeklyStatsYear():
     def merge_snapcounts(self):
         self.df_model = self.df_model.merge(self.df_snapcounts, on=["full_name", "week", "year"], how="left")
 
+    def read_weather_data(self, dir_weather):
+        team_rename_map = RenameMap(globs.file_weather_rename_map).rename_map
+        weather_files = os.listdir(dir_weather)
+        weather_dfs = []
+        for fn in weather_files:
+            week = re.findall('_[0-9]+\.',fn)
+            week = re.sub('[^0-9]','',str(week))
+            year = fn[:4]
+            if  int(year) == int(self.year):
+                df = pd.read_csv(os.path.join(dir_weather, fn))
+                df['week'] = int(week)
+                df['year'] = int(year)
+                weather_dfs.append(df)
+        self.df_weather = pd.concat(weather_dfs)
+
+        self.df_weather['team1'] = self.df_weather['team1'].apply(lambda x: team_rename_map[x])
+        self.df_weather['team2'] = self.df_weather['team2'].apply(lambda x: team_rename_map[x])
+
+        self.df_weather['wind_conditions'] = pd.to_numeric(self.df_weather['wind_conditions'].str.replace('[^0-9]',''))
+        self.df_weather['indoor_outdoor'] = self.df_weather['weather_forecast'].apply(lambda x: 1 if 'DOME' in x else 0)
+
+        weather1 = self.df_weather[['team1','wind_conditions','indoor_outdoor','week','year']]
+        weather1.columns = ['team','wind_conditions','indoor_outdoor','week','year']
+        weather2 = self.df_weather[['team2','wind_conditions','indoor_outdoor','week','year']]
+        weather2.columns = ['team','wind_conditions','indoor_outdoor','week','year']
+        self.df_weather = pd.concat([weather1,weather2])
+
+    def merge_weather(self):
+        self.df_model = self.df_model.merge(self.df_weather, on=["team", "week", "year"], how="left")
+
     def read_benchmark_data(self, filepath):
         self.df_benchmark = pd.read_csv(filepath)
 
@@ -409,7 +440,9 @@ if __name__ == "__main__":
     data_2017.create_nfl_features()
     data_2017.merge_salaries()
     #data_2017.read_snapcounts_data(os.path.join(globs.dir_snapcounts, "snapcounts_2017.csv"))
-    #data_2017.merge_snapcounts() 
+    #data_2017.merge_snapcounts()
+    data_2017.read_weather_data(globs.dir_weather)
+    data_2017.merge_weather()
 
 
     print(data_2017.df_player.position.value_counts())
