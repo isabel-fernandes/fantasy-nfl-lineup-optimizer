@@ -3,10 +3,10 @@ import requests
 import csv
 import re
 
-YEARS = [2013,2014,2015,2016,2017]
+YEARS = [2013,2014,2015,2016,2017,2018,2019]
 CURR_WEEK = 18
 root_url = 'http://nflweather.com/en/week/{}/week-{}/'
-dir_out = "../data/nfl_weather/" 
+dir_out = "../data/nfl_weather/"
 
 def scrape_page(url, year, week):
     resp = requests.get(url)
@@ -27,7 +27,7 @@ def scrape_page(url, year, week):
             wr = csv.writer(f)
             wr.writerow(header_row)
             wr.writerows(rows_data)
-        
+
     else:
         print("STATUS:",url)
 
