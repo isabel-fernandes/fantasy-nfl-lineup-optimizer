@@ -19,12 +19,13 @@ from datetime import datetime
 import gc
 
 class globs():
-    dir_players = "../data/player_weeks/"
+    dir_player = "../data/player_weeks/"
     dir_opp = "../data/opp_weeks/"
     dir_salaries = "../data/fanduel_salaries/"
-    dir_weather = "../data/nfl_weather/"
+    dir_nflweather = "../data/nfl_weather/"
     dir_snapcounts = "../data/snapcounts/"
-    #dir_benchmark = "../data/fanduel_projections/"
+    #dir_benchmark = "../data/fanduel_projections/" # TODO: need to get the scraper run for 2019 fanduel projections
+    dir_benchmark = "../data/espn_projection/" # ESPN's PPR projections (only rostered players)
     dir_model = "../data/model_data/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
@@ -33,6 +34,7 @@ class globs():
     file_opp = "opp_stats_{}.csv"
     file_player = "player_stats_{}.csv"
     file_salaries = "fd_salaries_{}.csv"
+    file_snapcounts = "snapcounts_stats_{}.csv"
 
     file_model_data = "df_model_{}.csv"
 
@@ -172,8 +174,13 @@ class WeeklyStatsYear():
     and in some cases, the bench mark (y_bench's) that are fed into the ML
     prediction model.
     """
-    def __init__(self, year):
+    def __init__(self, year, fpath_player, fpath_opp, fpath_salaries, fpath_snapcounts, dir_nflweather):
         self.year = year
+        self.fpath_player = fpath_player
+        self.fpath_opp = fpath_opp
+        self.fpath_salaries = fpath_salaries
+        self.fpath_snapcounts = fpath_snapcounts
+        self.dir_nflweather = dir_nflweather
 
     def read_player_data(self, filepath):
         self.df_player = pd.read_csv(filepath)
@@ -251,6 +258,15 @@ class WeeklyStatsYear():
         (self.df_player['puntret_tds'] * 6) +\
         (self.df_player['fumbles_lost'] * -2) +\
         (self.df_player['receiving_rec']) # Add in the 1 point per reception
+
+    def calc_target_fanduel(self):
+        """
+        Creates fantasy_points (the target variable) according to a FanDuel's
+        scoring regime.
+        TODO: Need to look this up, and alter code to use fanduel projections
+        benchmark and fanduel targets.
+        """
+        pass
 
     def calc_ratios(self):
         """
@@ -395,16 +411,16 @@ class WeeklyStatsYear():
     def merge_snapcounts(self):
         self.df_model = self.df_model.merge(self.df_snapcounts, on=["full_name", "week", "year"], how="left")
 
-    def read_weather_data(self, dir_weather):
+    def read_weather_data(self, dir_nflweather):
         team_rename_map = RenameMap(globs.file_weather_rename_map).rename_map
-        weather_files = os.listdir(dir_weather)
+        weather_files = os.listdir(dir_nflweather)
         weather_dfs = []
         for fn in weather_files:
             week = re.findall('_[0-9]+\.',fn)
             week = re.sub('[^0-9]','',str(week))
             year = fn[:4]
             if  int(year) == int(self.year):
-                df = pd.read_csv(os.path.join(dir_weather, fn))
+                df = pd.read_csv(os.path.join(dir_nflweather, fn))
                 df['week'] = int(week)
                 df['year'] = int(year)
                 weather_dfs.append(df)
@@ -425,37 +441,47 @@ class WeeklyStatsYear():
     def merge_weather(self):
         self.df_model = self.df_model.merge(self.df_weather, on=["team", "week", "year"], how="left")
 
+    def prep_model_data(self):
+        self.read_player_data(self.fpath_player)
+        self.read_opp_data(self.fpath_opp)
+        self.read_salaries_data(self.fpath_salaries)
+        self.calc_target_PPR()
+        self.calc_ratios()
+        self.clean_positions()
+        self.create_nfl_features()
+        self.merge_salaries()
+        # self.read_snapcounts_data(self.fpath_snapcounts)
+        # self.merge_snapcounts()
+        self.read_weather_data(self.dir_nflweather)
+        self.merge_weather()
+
     def export_model_data(self):
         savepath = os.path.join(globs.dir_model, globs.file_model_data.format(self.year))
         self.df_model.to_csv(savepath, index=False)
+
 
 def main():
     for year in globs.YEARS:
         print("Processing {}...".format(year))
         if "data" in locals():
             del data
-        data = WeeklyStatsYear(year)
-        data.read_opp_data(os.path.join(globs.dir_opp, globs.file_opp.format(year)))
-        data.read_player_data(os.path.join(globs.dir_players, globs.file_player.format(year)))
-        data.read_salaries_data(os.path.join(globs.dir_salaries, globs.file_salaries.format(year)))
-        data.calc_target_PPR()
-        data.calc_ratios()
-        data.clean_positions()
-        data.create_nfl_features()
-        data.merge_salaries()
-        # data.read_snapcounts_data(os.path.join(globs.dir_snapcounts, file_snapcounts.format(year)))
-        # data.merge_snapcounts()
-        data.read_weather_data(globs.dir_weather)
-        data.merge_weather()
-        data.export_model_data()
-
+        data = WeeklyStatsYear(
+            year,
+            os.path.join(globs.dir_player, globs.file_player.format(year)),
+            os.path.join(globs.dir_opp, globs.file_opp.format(year)),
+            os.path.join(globs.dir_salaries, globs.file_salaries.format(year)),
+            os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
+            globs.dir_nflweather
+        )
+        data.prep_model_data()
+        data.export_model_data() 
 
 if __name__ == "__main__":
     main()
     '''
     data_2017 = WeeklyStatsYear(2017)
     data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
-    data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
+    data_2017.read_player_data(os.path.join(globs.dir_player, "player_stats_2017.csv"))
     data_2017.read_salaries_data(os.path.join(globs.dir_salaries, "fd_salaries_2017.csv"))
     data_2017.calc_target_PPR()
     data_2017.calc_ratios()
@@ -464,6 +490,6 @@ if __name__ == "__main__":
     data_2017.merge_salaries()
     #data_2017.read_snapcounts_data(os.path.join(globs.dir_snapcounts, "snapcounts_2017.csv"))
     #data_2017.merge_snapcounts()
-    data_2017.read_weather_data(globs.dir_weather)
+    data_2017.read_weather_data(globs.dir_nflweather)
     data_2017.merge_weather()
     '''
