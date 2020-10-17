@@ -1,6 +1,7 @@
 # Large Data Files
 raw_data/*
 data/nfl_weather/*
+data/model_data/*
 
 # Desktop Service Store
 .DS_Store
