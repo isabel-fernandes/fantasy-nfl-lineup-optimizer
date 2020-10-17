@@ -24,7 +24,14 @@ class globs():
     dir_salaries = "./data/fanduel_salaries/"
     dir_weather = "./data/nfl_weather/"
     dir_snapcounts = "./data/snapcounts/"
-    dir_benchmark = "./data/fanduel_projections/" 
+    dir_benchmark = "./data/fanduel_projections/"
+
+    file_team_rename_map = "./meta_data/team_rename_map.csv"
+
+class RenameMap():
+    def __init__(self, filepath):
+        df = pd.read_csv(filepath, index_col=0)
+        self.rename_map = df.to_dict()[df.columns[0]] 
 
 class WeeklyStatsYear():
     """
