@@ -483,16 +483,30 @@ class ValDataset():
         self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
         self.df_model = pd.concat(self.df_model)
 
-class TestDataset():
-    def __init__(self, all_stats, pos, years):
-        self.all_stats = all_stats
+class MLDataset():
+    def __init__(self, all_data, pos, train_yrs, val_yrs, test_yrs):
+        self.all_data = all_data
         self.pos = pos
-        self.years = years
-        #self.benchmark_col = benchmark_col
+        self.train_yrs = train_yrs
+        self.val_yrs = val_yrs
+        self.test_yrs = test_yrs
 
-    def subset_data(self):
-        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
-        self.df_model = pd.concat(self.df_model)
+    def split_train(self):
+        self.df_train = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.train_yrs]
+        self.df_train = pd.concat(self.df_train)
+
+    def split_val(self):
+        self.df_val = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.val_yrs]
+        self.df_val = pd.concat(self.df_val)
+
+    def split_test(self):
+        self.df_test = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.test_yrs]
+        self.df_test = pd.concat(self.df_test)
+
+    def subset_position(self):
+        self.df_train = self.df_train[self.df_train[self.pos]==1]
+        self.df_val = self.df_val[self.df_val[self.pos]==1]
+        self.df_test = self.df_test[self.df_test[self.pos]==1]
 
 
 def main():
@@ -513,11 +527,11 @@ def main():
 
 if __name__ == "__main__":
     #main()
-    # Prep Data
-    data_years = []
+    # Prep Yearly Stats
+    stats_yrs = []
     for year in globs.YEARS:
-        print("Processing: {}".format(year))
-        data_year = WeeklyStatsYear(
+        print("Preprocessing Stats Years: {}".format(year))
+        stats_yr = WeeklyStatsYear(
             year,
             os.path.join(globs.dir_player, globs.file_player.format(year)),
             os.path.join(globs.dir_opp, globs.file_opp.format(year)),
@@ -525,15 +539,18 @@ if __name__ == "__main__":
             os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
             globs.dir_nflweather
         )
-        data_year.prep_model_data()
-        data_year.export_model_data()
-        data_years.append(data_year)
+        stats_yr.prep_model_data()
+        stats_yr.export_model_data()
+        stats_yrs.append(stats_yr)
 
     # Prep Train/Val/Test Splits
-    trains = {}
-    vals = {}
-    tests = {}
+    ml_datasets = {}
     for pos in globs.INCLUDE_POSITIONS:
-        trains[pos] = TrainDataset(data_years, pos, globs.TRAIN_YRS)
-        vals[pos] = ValDataset(data_years, pos, globs.VAL_YRS)
-        tests[pos] = TestDataset(data_years, pos, globs.TEST_YRS)
+        print("Generating ML Datasets by Position: {}".format(pos))
+        ml_datasets[pos] = MLDataset(
+            stats_yrs,
+            pos,
+            globs.TRAIN_YRS,
+            globs.VAL_YRS,
+            globs.TEST_YRS
+        )
