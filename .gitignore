@@ -10,3 +10,6 @@ env/*
 
 # ipynb checkpoints
 ~/.pynb_checkpoints/*
+
+# Cache Files
+*__pycache__
