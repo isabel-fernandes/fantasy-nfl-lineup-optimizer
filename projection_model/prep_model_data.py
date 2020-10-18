@@ -38,8 +38,12 @@ class globs():
 
     file_model_data = "df_model_{}.csv"
 
-    include_positions = ['QB', 'TE', 'WR', 'RB']
-    YEARS = [2013,2014,2015,2016,2017,2018,2019]
+    INCLUDE_POSITIONS = ['QB', 'TE', 'WR', 'RB']
+    #YEARS = [2013,2014,2015,2016,2017,2018,2019]
+    YEARS = [2013,2014,2016,2018,2019]
+    TRAIN_YRS = [2013,2014,2015]
+    VAL_YRS = [2018]
+    TEST_YRS = [2019]
 
     # Player stats fed into the model
     stat_cols = [
@@ -301,9 +305,9 @@ class WeeklyStatsYear():
         #self.df_player['position_fill'] = self.df_player['full_name'].apply(lambda x: fill_positions(x)) # This is left over from non-working function in old code
         self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
 
-        # Trim dataset to include_positions
+        # Trim dataset to INCLUDE_POSITIONS
         self.df_player['position'] = self.df_player['position'].str.replace('FB','RB')
-        self.df_player = self.df_player[self.df_player['position'].isin(globs.include_positions)]
+        self.df_player = self.df_player[self.df_player['position'].isin(globs.INCLUDE_POSITIONS)]
 
     # Feature Engineering Helper Functions
 
@@ -391,7 +395,7 @@ class WeeklyStatsYear():
         self.df_salaries['FirstName'] = self.df_salaries['FirstName'].str.strip()
         self.df_salaries['LastName'] = self.df_salaries['LastName'].str.strip()
         self.df_salaries['full_name'] = self.df_salaries['LastName']+' '+self.df_salaries['FirstName']
-        self.df_salaries = self.df_salaries[self.df_salaries.Pos.isin(globs.include_positions)].fillna(0)
+        self.df_salaries = self.df_salaries[self.df_salaries.Pos.isin(globs.INCLUDE_POSITIONS)].fillna(0)
         self.df_salaries = self.df_salaries[['Week','Team','full_name','fd_points','fd_salary']]
         self.df_salaries.columns = ['week','team','full_name','fd_points','fd_salary']
         self.df_salaries['week'] = pd.to_numeric(self.df_salaries['week'])
@@ -460,30 +464,42 @@ class WeeklyStatsYear():
         self.df_model.to_csv(savepath, index=False)
 
 class TrainDataset():
-    def __init__(self, df_model, pos, years):
-        self.df_model = df_model
+    def __init__(self, all_stats, pos, years):
+        self.all_stats = all_stats
         self.pos = pos
         self.years = years
+
+    def subset_data(self):
+        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
+        self.df_model = pd.concat(self.df_model)
 
 class ValDataset():
-    def __init__(self, df_model, pos, years):
-        self.df_model = df_model
+    def __init__(self, all_stats, pos, years):
+        self.all_stats = all_stats
         self.pos = pos
         self.years = years
+
+    def subset_data(self):
+        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
+        self.df_model = pd.concat(self.df_model)
 
 class TestDataset():
-    def __init__(self, df_model, pos, years, benchmark_col):
-        self.df_model = df_model
+    def __init__(self, all_stats, pos, years):
+        self.all_stats = all_stats
         self.pos = pos
         self.years = years
-        self.benchmark_col = benchmark_col 
+        #self.benchmark_col = benchmark_col
+
+    def subset_data(self):
+        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
+        self.df_model = pd.concat(self.df_model)
+
 
 def main():
+    data_years = []
     for year in globs.YEARS:
-        print("Processing {}...".format(year))
-        if "data" in locals():
-            del data
-        data = WeeklyStatsYear(
+        print("Processing: {}".format(year))
+        data_year = WeeklyStatsYear(
             year,
             os.path.join(globs.dir_player, globs.file_player.format(year)),
             os.path.join(globs.dir_opp, globs.file_opp.format(year)),
@@ -491,23 +507,33 @@ def main():
             os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
             globs.dir_nflweather
         )
-        data.prep_model_data()
-        data.export_model_data()
+        data_year.prep_model_data()
+        data_year.export_model_data()
+        data_years.append(data_year)
 
 if __name__ == "__main__":
-    main()
-    '''
-    data_2017 = WeeklyStatsYear(2017)
-    data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
-    data_2017.read_player_data(os.path.join(globs.dir_player, "player_stats_2017.csv"))
-    data_2017.read_salaries_data(os.path.join(globs.dir_salaries, "fd_salaries_2017.csv"))
-    data_2017.calc_target_PPR()
-    data_2017.calc_ratios()
-    data_2017.clean_positions()
-    data_2017.create_nfl_features()
-    data_2017.merge_salaries()
-    #data_2017.read_snapcounts_data(os.path.join(globs.dir_snapcounts, "snapcounts_2017.csv"))
-    #data_2017.merge_snapcounts()
-    data_2017.read_weather_data(globs.dir_nflweather)
-    data_2017.merge_weather()
-    '''
+    #main()
+    # Prep Data
+    data_years = []
+    for year in globs.YEARS:
+        print("Processing: {}".format(year))
+        data_year = WeeklyStatsYear(
+            year,
+            os.path.join(globs.dir_player, globs.file_player.format(year)),
+            os.path.join(globs.dir_opp, globs.file_opp.format(year)),
+            os.path.join(globs.dir_salaries, globs.file_salaries.format(year)),
+            os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
+            globs.dir_nflweather
+        )
+        data_year.prep_model_data()
+        data_year.export_model_data()
+        data_years.append(data_year)
+
+    # Prep Train/Val/Test Splits
+    trains = {}
+    vals = {}
+    tests = {}
+    for pos in globs.INCLUDE_POSITIONS:
+        trains[pos] = TrainDataset(data_years, pos, globs.TRAIN_YRS)
+        vals[pos] = ValDataset(data_years, pos, globs.VAL_YRS)
+        tests[pos] = TestDataset(data_years, pos, globs.TEST_YRS)
