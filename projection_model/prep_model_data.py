@@ -509,24 +509,7 @@ class MLDataset():
         self.df_test = self.df_test[self.df_test[self.pos]==1]
 
 
-def main():
-    data_years = []
-    for year in globs.YEARS:
-        print("Processing: {}".format(year))
-        data_year = WeeklyStatsYear(
-            year,
-            os.path.join(globs.dir_player, globs.file_player.format(year)),
-            os.path.join(globs.dir_opp, globs.file_opp.format(year)),
-            os.path.join(globs.dir_salaries, globs.file_salaries.format(year)),
-            os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
-            globs.dir_nflweather
-        )
-        data_year.prep_model_data()
-        data_year.export_model_data()
-        data_years.append(data_year)
-
 if __name__ == "__main__":
-    #main()
     # Prep Yearly Stats
     stats_yrs = []
     for year in globs.YEARS:
