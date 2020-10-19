@@ -17,6 +17,7 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 - Set up env: `conda env create --file environment.yml`
 - Activate to env: `conda activate dfs`
 - Fetch all remote branches: `git fetch origin`
+- When done working on project for the day, deactivate env: `conda deactivate` 
 
 ### Git Workflow
 - Switch to your personal dev branch: `git checkout corey-dev`
@@ -63,9 +64,10 @@ data files in the git repo.
 
 ### Sources
 - https://fantasydata.com/nfl/fantasy-football-leaders
-- http://rotoguru1.com/cgi-bin/fyday.pl
+- http://rotoguru1.com/cgi-bin/fyday.pl 
+- https://fantasydata.com/nfl/dfs-projections/fanduel
 
-### FanDuel Salaries
+### FanDuel Salaries (has data back to 2013)
 Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) <br>
 Sample: `data/fanduel_salaries/fd_salaries_2019.csv`
 - Note that this sample csv does not exactly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual webscraper outputs.
@@ -96,7 +98,7 @@ Sample: `data/weekly_players/sample_weekly.csv`
 | Wk                    | Week of season                | Int       | 1-17               |
 | Opp                   | Opponent team's abbreviation  | String    | GB, CAR, NYG, ...  |
 | Year                  | Starting year of the season   | Int       |                    |
-| Status                | Injury Status of Player       | String    | Q, O, IR, ,<-n/a   |
+| Status                | Injury Status of Player       | String    | Q, O, IR, 0        |
 | TeamScore             | Player's team's score in game | Int       |                    |
 | OppScore              | Opponent team's score in game | Int       |                    |
 | PassingYds            | Passing yards                 | Int       |                    |
@@ -112,6 +114,58 @@ Sample: `data/weekly_players/sample_weekly.csv`
 | ReceivingYds          | Receiving yards               | Int       |                    |
 | ReceivingTD           | Receiving touchdowns          | Int       |                    |
 | FL                    | Fumbles                       | Int       |                    |
+
+### FanDuel Projections and Salaries 
+NOTE: not preferred b/c only has data back to 2017 <br> 
+https://fantasydata.com/nfl/dfs-projections/fanduel
+| Parameter   | Description                              | Notes                     |
+|-------------|------------------------------------------|---------------------------|
+| Name        | Frist and Last name of player            | "Lamar Jackson"           |
+| Week        | Week of season                           | 1-17                      |
+| Opp         | Opponent team abbbreviation              | see list of team abbrev's |
+| OppRank     | Rank of opponent overall                 | 1-32                      |
+| OppPosRank  | Rank of opponent against player position | 1-32                      |
+| Proj        | FanDuel Projection                       |                           |
+| ProjPer1k   | FanDuel projection per $1K               |                           |
+| nProjOwners | Number of projected owners               |                           |
+| Salary      | Weekly salary ($)                        |                           |
+
+### Team Abbreviations
+(needs to be updated to 2020 team names and abbrevs) 
+| Name       | Abbreviation |
+|------------|--------------|
+| Cardinals  | ARI          |
+| Falcons    | ATL          |
+| Ravens     | BAL          |
+| Bills      | BUF          |
+| Panthers   | CAR          |
+| Bears      | CHI          |
+| Bengals    | CIN          |
+| Browns     | CLE          |
+| Cowboys    | DAL          |
+| Broncos    | DEN          |
+| Lions      | DET          |
+| Packers    | GB           |
+| Texans     | HOU          |
+| Colts      | IND          |
+| Jaguars    | JAX          |
+| Chiefs     | KC           |
+| Dolphins   | MIA          |
+| Vikings    | MIN          |
+| Patriots   | NE           |
+| Saints     | NO           |
+| Giants     | NYG          |
+| Jets       | NYJ          |
+| Raiders    | OAK          |
+| Eagles     | PHI          |
+| Steelers   | PIT          |
+| Chargers   | SD           |
+| 49ers      | SF           |
+| Seahawks   | SEA          |
+| Rams       | LA           |
+| Buccaneers | TB           |
+| Titans     | TEN          |
+| Redskins   | WAS          |
 
 ## Exploratory Analysis
 - Generate and explore features that are correlated with fantasy score
