@@ -1,6 +1,5 @@
 # Large Data Files
 raw_data/*
-data/nfl_weather/*
 data/model_data/*
 
 # Desktop Service Store
@@ -11,3 +10,6 @@ env/*
 
 # ipynb checkpoints
 ~/.pynb_checkpoints/*
+
+# Cache Files
+*__pycache__
