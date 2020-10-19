@@ -539,9 +539,9 @@ class MLDataset():
         pass
 
     def trim_low_scores(self):
-        self.df_train = self.df_train[self.df_train.fantasy_points > 0]
-        self.df_val = self.df_val[self.df_val.fantasy_points > 0]
-        self.df_test = self.df_test[self.df_test.fantasy_points > 0]
+        self.df_train = self.df_train[self.df_train.target > 0]
+        self.df_val = self.df_val[self.df_val.target > 0]
+        self.df_test = self.df_test[self.df_test.target > 0]
 
     def get_all_features(self):
         qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
@@ -610,6 +610,7 @@ if __name__ == "__main__":
     )
     ml_dataset.split_train_val_test()
     ml_dataset.read_espn_benchmark(os.path.join(globs.dir_benchmark, globs.file_benchmark))
+    ml_dataset.trim_low_scores()
     ml_dataset.get_all_features()
     ml_dataset.export_datasets()
 
