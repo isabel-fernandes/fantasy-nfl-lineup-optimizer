@@ -514,11 +514,17 @@ class MLDataset():
             "Week": "week",
             "year": "year",
             "Name": "full_name",
+            "Pos": "position",
             "proj_espn_ppr": "benchmark_espn"
         }
         df = df.rename(columns=rename_dict)
+
+        # Rename the Jr, Sr, III, II
+        drop_suffix_dict = {" Jr": "", " Sr": "", " III": "", " II": ""}
+        df["full_name"] = df["full_name"].replace(drop_suffix_dict, regex=True)
+        
         df = df[rename_dict.values()]
-        self.df_test = self.df_test.merge(df, on=["week", "year", "full_name"], how="left")
+        self.df_test = self.df_test.merge(df, on=["week", "year", "full_name", "position"], how="left")
 
     def read_fantasydata_benchmark(self, filepath):
         pass
@@ -556,4 +562,5 @@ if __name__ == "__main__":
         ml_datasets[pos].split_train()
         ml_datasets[pos].split_val()
         ml_datasets[pos].split_test()
+        ml_datasets[pos].subset_position()
         ml_datasets[pos].read_espn_benchmark("../data/espn_projections/espn_proj_2019.csv")
