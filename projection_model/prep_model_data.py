@@ -508,6 +508,22 @@ class MLDataset():
         self.df_val = self.df_val[self.df_val[self.pos]==1]
         self.df_test = self.df_test[self.df_test[self.pos]==1]
 
+    def read_espn_benchmark(self, filepath):
+        df = pd.read_csv(filepath)
+        rename_dict = {
+            "Week": "week",
+            "year": "year",
+            "Name": "full_name",
+            "proj_espn_ppr": "benchmark_espn"
+        }
+        df = df.rename(columns=rename_dict)
+        df = df[rename_dict.values()]
+        self.df_test = self.df_test.merge(df, on=["week", "year", "full_name"], how="left")
+
+    def read_fantasydata_benchmark(self, filepath):
+        pass
+
+
 
 if __name__ == "__main__":
     # Prep Yearly Stats
@@ -537,3 +553,7 @@ if __name__ == "__main__":
             globs.VAL_YRS,
             globs.TEST_YRS
         )
+        ml_datasets[pos].split_train()
+        ml_datasets[pos].split_val()
+        ml_datasets[pos].split_test()
+        ml_datasets[pos].read_espn_benchmark("../data/espn_projections/espn_proj_2019.csv")
