@@ -81,6 +81,8 @@ def export_data(df, savepath):
     keep_cols = ["Week", "Name", "Pos", "Status", "proj_espn_ppr", "actual_espn_ppr"]
     df = df[keep_cols]
 
+    df["year"] = season
+
     df.to_csv(savepath, index=False)
 
-export_data(df, savepath) 
+export_data(df, savepath)
