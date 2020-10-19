@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import gc
+import fnmatch
 
 class globs():
     dir_player = "../data/player_weeks/"
@@ -25,7 +26,7 @@ class globs():
     dir_nflweather = "../data/nfl_weather/"
     dir_snapcounts = "../data/snapcounts/"
     #dir_benchmark = "../data/fanduel_projections/" # TODO: need to get the scraper run for 2019 fanduel projections
-    dir_benchmark = "../data/espn_projection/" # ESPN's PPR projections (only rostered players)
+    dir_benchmark = "../data/espn_projections/" # ESPN's PPR projections (only rostered players)
     dir_model = "../data/model_data/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
@@ -35,17 +36,22 @@ class globs():
     file_player = "player_stats_{}.csv"
     file_salaries = "fd_salaries_{}.csv"
     file_snapcounts = "snapcounts_stats_{}.csv"
+    file_benchmark = "espn_proj_2019.csv"
 
     file_model_data = "df_model_{}.csv"
+    file_df_train = "df_train.csv"
+    file_df_val = "df_val.csv"
+    file_df_test = "df_test.csv"
 
     INCLUDE_POSITIONS = ['QB', 'TE', 'WR', 'RB']
     #YEARS = [2013,2014,2015,2016,2017,2018,2019]
-    YEARS = [2013,2014,2016,2018,2019]
-    TRAIN_YRS = [2013,2014,2015]
+    #YEARS = [2013,2014,2016,2018,2019]
+    YEARS = [2016,2017,2018,2019]
+    TRAIN_YRS = [2016,2017]
     VAL_YRS = [2018]
     TEST_YRS = [2019]
 
-    # Player stats fed into the model
+    # Player stats used to generate features
     stat_cols = [
         'fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
         'passing_att', 'passing_cmp', 'passing_ints', 'passing_tds', 'passer_ratio',
@@ -57,6 +63,11 @@ class globs():
         'rushing_yds','fantasy_points',
         'PassRushRatio_Att','PassRushRatio_Yds','PassRushRatio_Tds','RushRecRatio_AttRec',
         'RushRecRatio_Tds','RushRecRatio_Yds'
+    ]
+
+    model_features = [
+        "QB", "RB", "TE", "WR", "height", "weight", "age", "week", "fantasy_points",
+        ""
     ]
 
 def trim_sort(df):
@@ -355,7 +366,7 @@ class WeeklyStatsYear():
         matchups.dropna(inplace=True)
 
         ## fill in zeros for players with missing historical stats
-        #matchups.fillna(0, inplace=True)
+        matchups.fillna(0, inplace=True)
 
         # merge player weights to player performances
         matchups = matchups.merge(player_weights, on=['id','week','position'])
@@ -491,15 +502,13 @@ class MLDataset():
         self.val_yrs = val_yrs
         self.test_yrs = test_yrs
 
-    def split_train(self):
+    def split_train_val_test(self):
         self.df_train = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.train_yrs]
         self.df_train = pd.concat(self.df_train)
 
-    def split_val(self):
         self.df_val = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.val_yrs]
         self.df_val = pd.concat(self.df_val)
 
-    def split_test(self):
         self.df_test = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.test_yrs]
         self.df_test = pd.concat(self.df_test)
 
@@ -515,21 +524,64 @@ class MLDataset():
             "year": "year",
             "Name": "full_name",
             "Pos": "position",
-            "proj_espn_ppr": "benchmark_espn"
+            "proj_espn_ppr": "benchmark"
         }
         df = df.rename(columns=rename_dict)
 
         # Rename the Jr, Sr, III, II
         drop_suffix_dict = {" Jr": "", " Sr": "", " III": "", " II": ""}
         df["full_name"] = df["full_name"].replace(drop_suffix_dict, regex=True)
-        
+
         df = df[rename_dict.values()]
         self.df_test = self.df_test.merge(df, on=["week", "year", "full_name", "position"], how="left")
 
     def read_fantasydata_benchmark(self, filepath):
         pass
 
+    def trim_low_scores(self):
+        self.df_train = self.df_train[self.df_train.fantasy_points > 0]
+        self.df_val = self.df_val[self.df_val.fantasy_points > 0]
+        self.df_test = self.df_test[self.df_test.fantasy_points > 0]
 
+    def get_all_features(self):
+        qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
+        qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_wgt*mean")]
+        rb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "rushing*_wgt*mean")]
+        wr_features = [c for c in self.df_train if fnmatch.fnmatch(c, "receiving*_wgt*mean")]
+        def_features = [c for c in self.df_train if fnmatch.fnmatch(c, "defensive*_wgt*mean")]
+        fumble_features = [c for c in self.df_train if fnmatch.fnmatch(c, "fumbles*_wgt*mean")]
+        trend_features = [c for c in self.df_train if c.startswith("trend_")]
+
+        shared_features =[
+            "QB", "WR", "TE", "RB", "fd_salary", "wind_conditions",
+            "indoor_outdoor", "target_week", "inverse"
+        ]
+        self.all_features = shared_features +\
+            qb_features + rb_features + wr_features +\
+            def_features + fumble_features + trend_features
+
+        target_col = ["target"]
+        benchmark_col = ["benchmark"]
+
+        self.df_train = self.df_train[self.all_features + target_col]
+        self.df_val = self.df_val[self.all_features + target_col]
+        self.df_test = self.df_test[self.all_features + target_col + benchmark_col]
+
+    def export_datasets(self):
+        # Print export datsets sizes
+        print("Train Shape: {}".format(self.df_train.shape))
+        print("Val Shape: {}".format(self.df_val.shape))
+        print("Test Shape: {}".format(self.df_test.shape))
+
+        # Define savepaths
+        savepath_train = os.path.join(globs.dir_model, globs.file_df_train)
+        savepath_val = os.path.join(globs.dir_model, globs.file_df_val)
+        savepath_test = os.path.join(globs.dir_model, globs.file_df_test)
+
+        # Save Data
+        self.df_train.to_csv(savepath_train, index=False)
+        self.df_val.to_csv(savepath_val, index=False)
+        self.df_test.to_csv(savepath_test, index=False)
 
 if __name__ == "__main__":
     # Prep Yearly Stats
@@ -549,6 +601,19 @@ if __name__ == "__main__":
         stats_yrs.append(stats_yr)
 
     # Prep Train/Val/Test Splits
+    ml_dataset = MLDataset(
+        stats_yrs,
+        "all",
+        globs.TRAIN_YRS,
+        globs.VAL_YRS,
+        globs.TEST_YRS
+    )
+    ml_dataset.split_train_val_test()
+    ml_dataset.read_espn_benchmark(os.path.join(globs.dir_benchmark, globs.file_benchmark))
+    ml_dataset.get_all_features()
+    ml_dataset.export_datasets()
+
+    '''
     ml_datasets = {}
     for pos in globs.INCLUDE_POSITIONS:
         print("Generating ML Datasets by Position: {}".format(pos))
@@ -559,8 +624,8 @@ if __name__ == "__main__":
             globs.VAL_YRS,
             globs.TEST_YRS
         )
-        ml_datasets[pos].split_train()
-        ml_datasets[pos].split_val()
-        ml_datasets[pos].split_test()
+        ml_datasets[pos].split_train_val_test()
         ml_datasets[pos].subset_position()
-        ml_datasets[pos].read_espn_benchmark("../data/espn_projections/espn_proj_2019.csv")
+        ml_datasets[pos].read_espn_benchmark(os.path.join(globs.dir_benchmark, globs.file_benchmark))
+        ml_datasets[pos].get_all_features()
+    '''
