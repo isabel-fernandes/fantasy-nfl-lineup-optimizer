@@ -17,14 +17,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import gc
+import fnmatch
 
 class globs():
-    dir_players = "../data/player_weeks/"
+    dir_player = "../data/player_weeks/"
     dir_opp = "../data/opp_weeks/"
     dir_salaries = "../data/fanduel_salaries/"
-    dir_weather = "../data/nfl_weather/"
+    dir_nflweather = "../data/nfl_weather/"
     dir_snapcounts = "../data/snapcounts/"
-    #dir_benchmark = "../data/fanduel_projections/"
+    #dir_benchmark = "../data/fanduel_projections/" # TODO: need to get the scraper run for 2019 fanduel projections
+    dir_benchmark = "../data/espn_projections/" # ESPN's PPR projections (only rostered players)
     dir_model = "../data/model_data/"
 
     file_team_rename_map = "../meta_data/team_rename_map.csv"
@@ -33,13 +35,23 @@ class globs():
     file_opp = "opp_stats_{}.csv"
     file_player = "player_stats_{}.csv"
     file_salaries = "fd_salaries_{}.csv"
+    file_snapcounts = "snapcounts_stats_{}.csv"
+    file_benchmark = "espn_proj_2019.csv"
 
     file_model_data = "df_model_{}.csv"
+    file_df_train = "df_train.csv"
+    file_df_val = "df_val.csv"
+    file_df_test = "df_test.csv"
 
-    include_positions = ['QB', 'TE', 'WR', 'RB']
-    YEARS = [2013,2014,2015,2016,2017,2018,2019]
+    INCLUDE_POSITIONS = ['QB', 'TE', 'WR', 'RB']
+    #YEARS = [2013,2014,2015,2016,2017,2018,2019]
+    #YEARS = [2013,2014,2016,2018,2019]
+    YEARS = [2016,2017,2018,2019]
+    TRAIN_YRS = [2016,2017]
+    VAL_YRS = [2018]
+    TEST_YRS = [2019]
 
-    # Player stats fed into the model
+    # Player stats used to generate features
     stat_cols = [
         'fumbles_lost', 'fumbles_rcv', 'fumbles_tot','fumbles_trcv', 'fumbles_yds',
         'passing_att', 'passing_cmp', 'passing_ints', 'passing_tds', 'passer_ratio',
@@ -51,6 +63,11 @@ class globs():
         'rushing_yds','fantasy_points',
         'PassRushRatio_Att','PassRushRatio_Yds','PassRushRatio_Tds','RushRecRatio_AttRec',
         'RushRecRatio_Tds','RushRecRatio_Yds'
+    ]
+
+    model_features = [
+        "QB", "RB", "TE", "WR", "height", "weight", "age", "week", "fantasy_points",
+        ""
     ]
 
 def trim_sort(df):
@@ -172,8 +189,13 @@ class WeeklyStatsYear():
     and in some cases, the bench mark (y_bench's) that are fed into the ML
     prediction model.
     """
-    def __init__(self, year):
+    def __init__(self, year, fpath_player, fpath_opp, fpath_salaries, fpath_snapcounts, dir_nflweather):
         self.year = year
+        self.fpath_player = fpath_player
+        self.fpath_opp = fpath_opp
+        self.fpath_salaries = fpath_salaries
+        self.fpath_snapcounts = fpath_snapcounts
+        self.dir_nflweather = dir_nflweather
 
     def read_player_data(self, filepath):
         self.df_player = pd.read_csv(filepath)
@@ -252,6 +274,15 @@ class WeeklyStatsYear():
         (self.df_player['fumbles_lost'] * -2) +\
         (self.df_player['receiving_rec']) # Add in the 1 point per reception
 
+    def calc_target_fanduel(self):
+        """
+        Creates fantasy_points (the target variable) according to a FanDuel's
+        scoring regime.
+        TODO: Need to look this up, and alter code to use fanduel projections
+        benchmark and fanduel targets.
+        """
+        pass
+
     def calc_ratios(self):
         """
         Create pass/rus/reception ratios to be included in feature set for model.
@@ -285,9 +316,9 @@ class WeeklyStatsYear():
         #self.df_player['position_fill'] = self.df_player['full_name'].apply(lambda x: fill_positions(x)) # This is left over from non-working function in old code
         self.df_player['position'].fillna(self.df_player['position_fill'], inplace=True)
 
-        # Trim dataset to include_positions
+        # Trim dataset to INCLUDE_POSITIONS
         self.df_player['position'] = self.df_player['position'].str.replace('FB','RB')
-        self.df_player = self.df_player[self.df_player['position'].isin(globs.include_positions)]
+        self.df_player = self.df_player[self.df_player['position'].isin(globs.INCLUDE_POSITIONS)]
 
     # Feature Engineering Helper Functions
 
@@ -335,7 +366,7 @@ class WeeklyStatsYear():
         matchups.dropna(inplace=True)
 
         ## fill in zeros for players with missing historical stats
-        #matchups.fillna(0, inplace=True)
+        matchups.fillna(0, inplace=True)
 
         # merge player weights to player performances
         matchups = matchups.merge(player_weights, on=['id','week','position'])
@@ -375,7 +406,7 @@ class WeeklyStatsYear():
         self.df_salaries['FirstName'] = self.df_salaries['FirstName'].str.strip()
         self.df_salaries['LastName'] = self.df_salaries['LastName'].str.strip()
         self.df_salaries['full_name'] = self.df_salaries['LastName']+' '+self.df_salaries['FirstName']
-        self.df_salaries = self.df_salaries[self.df_salaries.Pos.isin(globs.include_positions)].fillna(0)
+        self.df_salaries = self.df_salaries[self.df_salaries.Pos.isin(globs.INCLUDE_POSITIONS)].fillna(0)
         self.df_salaries = self.df_salaries[['Week','Team','full_name','fd_points','fd_salary']]
         self.df_salaries.columns = ['week','team','full_name','fd_points','fd_salary']
         self.df_salaries['week'] = pd.to_numeric(self.df_salaries['week'])
@@ -395,16 +426,16 @@ class WeeklyStatsYear():
     def merge_snapcounts(self):
         self.df_model = self.df_model.merge(self.df_snapcounts, on=["full_name", "week", "year"], how="left")
 
-    def read_weather_data(self, dir_weather):
+    def read_weather_data(self, dir_nflweather):
         team_rename_map = RenameMap(globs.file_weather_rename_map).rename_map
-        weather_files = os.listdir(dir_weather)
+        weather_files = os.listdir(dir_nflweather)
         weather_dfs = []
         for fn in weather_files:
             week = re.findall('_[0-9]+\.',fn)
             week = re.sub('[^0-9]','',str(week))
             year = fn[:4]
             if  int(year) == int(self.year):
-                df = pd.read_csv(os.path.join(dir_weather, fn))
+                df = pd.read_csv(os.path.join(dir_nflweather, fn))
                 df['week'] = int(week)
                 df['year'] = int(year)
                 weather_dfs.append(df)
@@ -425,45 +456,176 @@ class WeeklyStatsYear():
     def merge_weather(self):
         self.df_model = self.df_model.merge(self.df_weather, on=["team", "week", "year"], how="left")
 
+    def prep_model_data(self):
+        self.read_player_data(self.fpath_player)
+        self.read_opp_data(self.fpath_opp)
+        self.read_salaries_data(self.fpath_salaries)
+        self.calc_target_PPR()
+        self.calc_ratios()
+        self.clean_positions()
+        self.create_nfl_features()
+        self.merge_salaries()
+        # self.read_snapcounts_data(self.fpath_snapcounts)
+        # self.merge_snapcounts()
+        self.read_weather_data(self.dir_nflweather)
+        self.merge_weather()
+
     def export_model_data(self):
         savepath = os.path.join(globs.dir_model, globs.file_model_data.format(self.year))
         self.df_model.to_csv(savepath, index=False)
 
-def main():
-    for year in globs.YEARS:
-        print("Processing {}...".format(year))
-        if "data" in locals():
-            del data
-        data = WeeklyStatsYear(year)
-        data.read_opp_data(os.path.join(globs.dir_opp, globs.file_opp.format(year)))
-        data.read_player_data(os.path.join(globs.dir_players, globs.file_player.format(year)))
-        data.read_salaries_data(os.path.join(globs.dir_salaries, globs.file_salaries.format(year)))
-        data.calc_target_PPR()
-        data.calc_ratios()
-        data.clean_positions()
-        data.create_nfl_features()
-        data.merge_salaries()
-        # data.read_snapcounts_data(os.path.join(globs.dir_snapcounts, file_snapcounts.format(year)))
-        # data.merge_snapcounts()
-        data.read_weather_data(globs.dir_weather)
-        data.merge_weather()
-        data.export_model_data()
+class TrainDataset():
+    def __init__(self, all_stats, pos, years):
+        self.all_stats = all_stats
+        self.pos = pos
+        self.years = years
 
+    def subset_data(self):
+        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
+        self.df_model = pd.concat(self.df_model)
+
+class ValDataset():
+    def __init__(self, all_stats, pos, years):
+        self.all_stats = all_stats
+        self.pos = pos
+        self.years = years
+
+    def subset_data(self):
+        self.df_model = [stats_year.df_model for stats_year in self.all_stats if stats_year.year in self.years]
+        self.df_model = pd.concat(self.df_model)
+
+class MLDataset():
+    def __init__(self, all_data, pos, train_yrs, val_yrs, test_yrs):
+        self.all_data = all_data
+        self.pos = pos
+        self.train_yrs = train_yrs
+        self.val_yrs = val_yrs
+        self.test_yrs = test_yrs
+
+    def split_train_val_test(self):
+        self.df_train = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.train_yrs]
+        self.df_train = pd.concat(self.df_train)
+
+        self.df_val = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.val_yrs]
+        self.df_val = pd.concat(self.df_val)
+
+        self.df_test = [data_yr.df_model for data_yr in self.all_data if data_yr.year in self.test_yrs]
+        self.df_test = pd.concat(self.df_test)
+
+    def subset_position(self):
+        self.df_train = self.df_train[self.df_train[self.pos]==1]
+        self.df_val = self.df_val[self.df_val[self.pos]==1]
+        self.df_test = self.df_test[self.df_test[self.pos]==1]
+
+    def read_espn_benchmark(self, filepath):
+        df = pd.read_csv(filepath)
+        rename_dict = {
+            "Week": "week",
+            "year": "year",
+            "Name": "full_name",
+            "Pos": "position",
+            "proj_espn_ppr": "benchmark"
+        }
+        df = df.rename(columns=rename_dict)
+
+        # Rename the Jr, Sr, III, II
+        drop_suffix_dict = {" Jr": "", " Sr": "", " III": "", " II": ""}
+        df["full_name"] = df["full_name"].replace(drop_suffix_dict, regex=True)
+
+        df = df[rename_dict.values()]
+        self.df_test = self.df_test.merge(df, on=["week", "year", "full_name", "position"], how="left")
+
+    def read_fantasydata_benchmark(self, filepath):
+        pass
+
+    def trim_low_scores(self):
+        self.df_train = self.df_train[self.df_train.fantasy_points > 0]
+        self.df_val = self.df_val[self.df_val.fantasy_points > 0]
+        self.df_test = self.df_test[self.df_test.fantasy_points > 0]
+
+    def get_all_features(self):
+        qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
+        qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_wgt*mean")]
+        rb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "rushing*_wgt*mean")]
+        wr_features = [c for c in self.df_train if fnmatch.fnmatch(c, "receiving*_wgt*mean")]
+        def_features = [c for c in self.df_train if fnmatch.fnmatch(c, "defensive*_wgt*mean")]
+        fumble_features = [c for c in self.df_train if fnmatch.fnmatch(c, "fumbles*_wgt*mean")]
+        trend_features = [c for c in self.df_train if c.startswith("trend_")]
+
+        shared_features =[
+            "QB", "WR", "TE", "RB", "fd_salary", "wind_conditions",
+            "indoor_outdoor", "target_week", "inverse"
+        ]
+        self.all_features = shared_features +\
+            qb_features + rb_features + wr_features +\
+            def_features + fumble_features + trend_features
+
+        target_col = ["target"]
+        benchmark_col = ["benchmark"]
+
+        self.df_train = self.df_train[self.all_features + target_col]
+        self.df_val = self.df_val[self.all_features + target_col]
+        self.df_test = self.df_test[self.all_features + target_col + benchmark_col]
+
+    def export_datasets(self):
+        # Print export datsets sizes
+        print("Train Shape: {}".format(self.df_train.shape))
+        print("Val Shape: {}".format(self.df_val.shape))
+        print("Test Shape: {}".format(self.df_test.shape))
+
+        # Define savepaths
+        savepath_train = os.path.join(globs.dir_model, globs.file_df_train)
+        savepath_val = os.path.join(globs.dir_model, globs.file_df_val)
+        savepath_test = os.path.join(globs.dir_model, globs.file_df_test)
+
+        # Save Data
+        self.df_train.to_csv(savepath_train, index=False)
+        self.df_val.to_csv(savepath_val, index=False)
+        self.df_test.to_csv(savepath_test, index=False)
 
 if __name__ == "__main__":
-    main()
+    # Prep Yearly Stats
+    stats_yrs = []
+    for year in globs.YEARS:
+        print("Preprocessing Stats Years: {}".format(year))
+        stats_yr = WeeklyStatsYear(
+            year,
+            os.path.join(globs.dir_player, globs.file_player.format(year)),
+            os.path.join(globs.dir_opp, globs.file_opp.format(year)),
+            os.path.join(globs.dir_salaries, globs.file_salaries.format(year)),
+            os.path.join(globs.dir_snapcounts, globs.file_snapcounts.format(year)),
+            globs.dir_nflweather
+        )
+        stats_yr.prep_model_data()
+        stats_yr.export_model_data()
+        stats_yrs.append(stats_yr)
+
+    # Prep Train/Val/Test Splits
+    ml_dataset = MLDataset(
+        stats_yrs,
+        "all",
+        globs.TRAIN_YRS,
+        globs.VAL_YRS,
+        globs.TEST_YRS
+    )
+    ml_dataset.split_train_val_test()
+    ml_dataset.read_espn_benchmark(os.path.join(globs.dir_benchmark, globs.file_benchmark))
+    ml_dataset.get_all_features()
+    ml_dataset.export_datasets()
+
     '''
-    data_2017 = WeeklyStatsYear(2017)
-    data_2017.read_opp_data(os.path.join(globs.dir_opp, "opp_stats_2017.csv"))
-    data_2017.read_player_data(os.path.join(globs.dir_players, "player_stats_2017.csv"))
-    data_2017.read_salaries_data(os.path.join(globs.dir_salaries, "fd_salaries_2017.csv"))
-    data_2017.calc_target_PPR()
-    data_2017.calc_ratios()
-    data_2017.clean_positions()
-    data_2017.create_nfl_features()
-    data_2017.merge_salaries()
-    #data_2017.read_snapcounts_data(os.path.join(globs.dir_snapcounts, "snapcounts_2017.csv"))
-    #data_2017.merge_snapcounts()
-    data_2017.read_weather_data(globs.dir_weather)
-    data_2017.merge_weather()
+    ml_datasets = {}
+    for pos in globs.INCLUDE_POSITIONS:
+        print("Generating ML Datasets by Position: {}".format(pos))
+        ml_datasets[pos] = MLDataset(
+            stats_yrs,
+            pos,
+            globs.TRAIN_YRS,
+            globs.VAL_YRS,
+            globs.TEST_YRS
+        )
+        ml_datasets[pos].split_train_val_test()
+        ml_datasets[pos].subset_position()
+        ml_datasets[pos].read_espn_benchmark(os.path.join(globs.dir_benchmark, globs.file_benchmark))
+        ml_datasets[pos].get_all_features()
     '''
