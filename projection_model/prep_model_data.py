@@ -544,12 +544,18 @@ class MLDataset():
         self.df_test = self.df_test[self.df_test.target > 0]
 
     def get_all_features(self):
-        qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
-        qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_wgt*mean")]
-        rb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "rushing*_wgt*mean")]
-        wr_features = [c for c in self.df_train if fnmatch.fnmatch(c, "receiving*_wgt*mean")]
-        def_features = [c for c in self.df_train if fnmatch.fnmatch(c, "defensive*_wgt*mean")]
-        fumble_features = [c for c in self.df_train if fnmatch.fnmatch(c, "fumbles*_wgt*mean")]
+        #qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
+        #qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_wgt*mean")]
+        #rb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "rushing*_wgt*mean")]
+        #wr_features = [c for c in self.df_train if fnmatch.fnmatch(c, "receiving*_wgt*mean")]
+        #def_features = [c for c in self.df_train if fnmatch.fnmatch(c, "defensive*_wgt*mean")]
+        #fumble_features = [c for c in self.df_train if fnmatch.fnmatch(c, "fumbles*_wgt*mean")]
+        qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_*mean")]
+        qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_*mean")]
+        rb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "rushing*_*mean")]
+        wr_features = [c for c in self.df_train if fnmatch.fnmatch(c, "receiving*_*mean")]
+        def_features = [c for c in self.df_train if fnmatch.fnmatch(c, "defensive*_*mean")]
+        fumble_features = [c for c in self.df_train if fnmatch.fnmatch(c, "fumbles*_*mean")]
         trend_features = [c for c in self.df_train if c.startswith("trend_")]
 
         shared_features =[
