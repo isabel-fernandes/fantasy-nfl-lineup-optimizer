@@ -25,23 +25,22 @@ class globs():
     RESPONSE_VAR = "target"
     BENCHMARK = "benchmark"
     SPARE_POS = "TE" # This feature is redundant to [QB, RB, WR]
-    CURR_WEEK = 13
 
     grid_params = {
         "GradBoost": {
-            "n_estimators": [50,100,200],
-            "learning_rate": [0.001,0.005,0.02,0.1,0.5]
+            "n_estimators": [200],
+            "learning_rate": [0.02]
         },
         "RandForest": {
-            "n_estimators": [50,100,200],
+            "n_estimators": [200],
             "criterion": ["mse"],
-            "bootstrap": [False, True]
+            "bootstrap": [True]
         }
     }
 
     models = {
         "GradBoost": GradientBoostingRegressor(),
-        "RandForest": RandomForestRegressor()
+        #"RandForest": RandomForestRegressor()
     }
 
 
@@ -54,10 +53,6 @@ class ModelRun():
         self.df_val = pd.read_csv(file_val).dropna().sort_values(by=["year","target_week"])
         self.df_test = pd.read_csv(file_test).dropna().sort_values(by=["year","target_week"])
 
-        #self.df_train = self.df_train.drop("year", axis=1)
-        #self.df_val = self.df_val.drop("year", axis=1)
-        #self.df_test = self.df_test.drop("year", axis=1)
-
         self.features = list(self.df_test)
         self.features.remove(globs.RESPONSE_VAR)
         self.features.remove(globs.BENCHMARK)
@@ -66,12 +61,6 @@ class ModelRun():
 
     def prep_data(self):
         ss = StandardScaler()
-        #self.X_fit_train = self.df_train.loc[self.df_train.target_week <= globs.CURR_WEEK, self.features]
-        #self.y_fit_train = self.df_train.loc[self.df_train.target_week <= globs.CURR_WEEK, globs.RESPONSE_VAR]
-        #self.X_fit_test = self.df_train.loc[self.df_train.target_week > globs.CURR_WEEK, self.features]
-        #self.y_fit_test = self.df_train.loc[self.df_train.target_week > globs.CURR_WEEK, globs.RESPONSE_VAR]
-        #self.X_fit_train = ss.fit_transform(self.X_fit_train)
-        #self.X_fit_test = ss.fit_transform(self.X_fit_test)
 
         self.X_train = self.df_train.loc[:,self.features]
         self.y_train = self.df_train.loc[:,globs.RESPONSE_VAR]
@@ -94,6 +83,7 @@ class ModelRun():
                 param_grid = globs.grid_params[model],
                 scoring="neg_mean_squared_error",
                 cv=TimeSeriesSplit(n_splits=5),
+                refit=True,
                 n_jobs=1
             )
             search.fit(self.X_train, self.y_train)
@@ -123,12 +113,15 @@ class ModelRun():
         df = pd.concat([self.df_train, self.df_val], axis=0)
         X_fit = df.loc[:,self.features]
         y_fit = df.loc[:,globs.RESPONSE_VAR]
-        self.best_model.fit(X_fit, y_fit)
+
+        test_model = self.searches[self.best_model_info["class"]].best_estimator_\
+            .fit(X_fit, y_fit)
 
         X_test = self.df_test.loc[:,self.features]
         y_test = self.df_test.loc[:,globs.RESPONSE_VAR]
         y_bench = self.df_test.loc[:,globs.BENCHMARK]
-        y_pred = self.best_model.predict(X_test)
+
+        y_pred = test_model.predict(X_test)
         mse = metrics.mean_squared_error(y_test, y_pred)
         rmse = mse**(0.5)
         print("{} Test RMSE: {:.3f}".format(self.best_model_info["class"], rmse))

@@ -46,8 +46,8 @@ class globs():
     INCLUDE_POSITIONS = ['QB', 'TE', 'WR', 'RB']
     #YEARS = [2013,2014,2015,2016,2017,2018,2019]
     #YEARS = [2013,2014,2016,2018,2019]
-    YEARS = [2016,2017,2018,2019]
-    TRAIN_YRS = [2016,2017]
+    YEARS = [2013,2014,2015,2016,2017,2018,2019]
+    TRAIN_YRS = [2013,2014,2015,2016,2017]
     VAL_YRS = [2018]
     TEST_YRS = [2019]
 
@@ -543,6 +543,10 @@ class MLDataset():
         self.df_val = self.df_val[self.df_val.target > 0]
         self.df_test = self.df_test[self.df_test.target > 0]
 
+        self.df_train = self.df_train[self.df_train.fantasy_points >= 5]
+        self.df_val = self.df_val[self.df_val.fantasy_points >= 5]
+        self.df_test = self.df_test[self.df_test.fantasy_points >= 5]
+
     def get_all_features(self):
         #qb_features = [c for c in self.df_train if fnmatch.fnmatch(c, "passing*_wgt*mean")]
         #qb_features += [c for c in self.df_train if fnmatch.fnmatch(c, "passer*_wgt*mean")]
@@ -560,7 +564,7 @@ class MLDataset():
 
         shared_features =[
             "QB", "WR", "TE", "RB", "fd_salary", "wind_conditions",
-            "indoor_outdoor", "target_week", "inverse", "year"
+            "indoor_outdoor", "target_week", "inverse", "year", "fantasy_points"
         ]
         self.all_features = shared_features +\
             qb_features + rb_features + wr_features +\
