@@ -554,7 +554,7 @@ class MLDataset():
 
         shared_features =[
             "QB", "WR", "TE", "RB", "fd_salary", "wind_conditions",
-            "indoor_outdoor", "target_week", "inverse"
+            "indoor_outdoor", "target_week", "inverse", "year"
         ]
         self.all_features = shared_features +\
             qb_features + rb_features + wr_features +\

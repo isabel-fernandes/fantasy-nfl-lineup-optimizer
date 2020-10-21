@@ -11,7 +11,7 @@ from numpy import mean
 from numpy import std
 from sklearn.utils import shuffle
 from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.model_selection import GridSearchCV
 
 class globs():
@@ -28,11 +28,11 @@ class globs():
 
     grid_params = {
         "GradBoost": {
-            "n_estimators": [10,50],
+            "n_estimators": [10,20],
             "learning_rate": [0.1,0.5]
         },
         "RandForest": {
-            "n_estimators": [10, 20, 50],
+            "n_estimators": [5,8],
             "criterion": ["mse"],
             "bootstrap": [False, True]
         }
@@ -49,9 +49,9 @@ class ModelRun():
         pass
 
     def read_data(self, file_train, file_val, file_test):
-        self.df_train = pd.read_csv(file_train).dropna()
-        self.df_val = pd.read_csv(file_val).dropna()
-        self.df_test = pd.read_csv(file_test).dropna()
+        self.df_train = pd.read_csv(file_train).dropna().sort_values(by=["year","target_week"])
+        self.df_val = pd.read_csv(file_val).dropna().sort_values(by=["year","target_week"])
+        self.df_test = pd.read_csv(file_test).dropna().sort_values(by=["year","target_week"])
 
         self.features = list(self.df_test)
         self.features.remove(globs.RESPONSE_VAR)
@@ -72,35 +72,30 @@ class ModelRun():
         self.y = self.df_train.loc[:,globs.RESPONSE_VAR]
         self.X = ss.fit_transform(self.X)
 
-    def run_search(self):
+    def search_models(self):
+        self.searches = {}
         for model in globs.models.keys():
             regressor = globs.models[model]
-            #all_accuracies = cross_val_score(estimator=regressor, X=self.X_fit_train
-            gd_sr = GridSearchCV(
+            search = GridSearchCV(
                 estimator = regressor,
                 param_grid = globs.grid_params[model],
                 scoring="neg_mean_squared_error",
-                cv=5,
+                cv=TimeSeriesSplit(n_splits=3),
                 n_jobs=1
             )
-            gd_sr.fit(self.X_fit_train, self.y_fit_train)
-            best_params = gd_sr.best_params_
-            print(best_params)
-            best_result = gd_sr.best_score_
-            best_rmse = (-gd_sr.best_score_)**(0.5)
-            print("{} Best RMSE: {}".format(model, best_rmse)) 
+            search.fit(self.X_fit_train, self.y_fit_train)
+            best_params = search.best_params_
+            best_result = search.best_score_
+            best_rmse = (-search.best_score_)**(0.5)
+            #print("{} Best RMSE: {:.3f}, Params: {}".format(model, best_rmse, best_params))
+            self.searches[model] = search
 
-    def run_cross_val(self):
-        cv_inner = KFold(n_splits=3, shuffle=True)
-        model = globs.models["RandForest"]
-        space = globs.grid_params["RandForest"]
-        search = GridSearchCV(model, space, scoring="accuracy", n_jobs=1, cv=cv_inner, refit=True)
-        cv_outer = KFold(n_splits=10, shuffle=True)
-        scores = cross_val_score(search, self.X, self.y, scoring="accuracy", cv=cv_outer, n_jobs=1)
-        print("Accuracy: {} ({})".format(mean(scores), std(scores)))
-        # Iterage over all model classes
-        #for model in globs.models.keys():
-
+    def select_model(self):
+        for model, search in self.searches.items():
+            best_params = search.best_params_
+            best_result = search.best_score_
+            best_rmse = (-search.best_score_)**(0.5)
+            print("{} Best RMSE: {:.3f}, Params: {}".format(model, best_rmse, best_params))
 
 if __name__ == "__main__":
     modelrun = ModelRun()
@@ -110,5 +105,5 @@ if __name__ == "__main__":
         os.path.join(globs.dir_in, globs.file_test)
     )
     modelrun.prep_data()
-    #modelrun.run_cross_val()
-    modelrun.run_search()
+    modelrun.search_models()
+    modelrun.select_model()
