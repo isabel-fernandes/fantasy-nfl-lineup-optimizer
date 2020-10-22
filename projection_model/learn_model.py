@@ -28,11 +28,11 @@ class globs():
 
     grid_params = {
         "GradBoost": {
-            "n_estimators": [200],
-            "learning_rate": [0.02]
+            "n_estimators": [100,200,500],
+            "learning_rate": [0.01,0.02,0.05]
         },
         "RandForest": {
-            "n_estimators": [200],
+            "n_estimators": [100,200,500],
             "criterion": ["mse"],
             "bootstrap": [True]
         }
