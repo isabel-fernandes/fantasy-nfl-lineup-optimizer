@@ -163,6 +163,8 @@ a version of reinforcement learning. Probably Q-learning, similar to previous
 work carried out by [1].
 
 ## Display dashboard
+This visualizations were made in Python using the Bokeh visualization library, a interactive visualization library for modern web browsers. Here we can see information about the NFL players performance, points and salaries in a Daily Fantasy Sports (DFS) League in 2019.
+
 
 ### Most Expensive Players and Average Points Per Position
 ###
