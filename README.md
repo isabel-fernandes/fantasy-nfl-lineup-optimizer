@@ -10,6 +10,26 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 - Lineup Optimizer
 - Display Dashboard
 
+## Display dashboard
+This visualizations were made in Python using the Bokeh visualization library, a interactive visualization library for modern web browsers. Here we can see information about the NFL players performance, points and salaries in a Daily Fantasy Sports (DFS) League in 2019.
+
+
+### Most Expensive Players and Average Points Per Position
+###
+![pie](https://user-images.githubusercontent.com/71770145/97742909-d0044480-1adc-11eb-9ae1-1172f9545db5.gif)
+
+### Points and Salary Relation
+###
+![points_salary](https://user-images.githubusercontent.com/71770145/97743465-9b44bd00-1add-11eb-839e-de9657d00510.gif)
+
+### Top 5
+###
+![top5](https://user-images.githubusercontent.com/71770145/97743503-aa2b6f80-1add-11eb-851f-7abf9301a812.gif)
+
+### Teams Completion
+###
+![teams_comp](https://user-images.githubusercontent.com/71770145/97743624-d5ae5a00-1add-11eb-9e7c-7a4bcda382ae.gif)
+
 ## Data Scraper
 
 ### Sources
@@ -161,23 +181,3 @@ Because of the large state and action space, an explicit representation of the
 environment is not possible. Therefore, the optimal policy will be learned using
 a version of reinforcement learning. Probably Q-learning, similar to previous
 work carried out by [1].
-
-## Display dashboard
-This visualizations were made in Python using the Bokeh visualization library, a interactive visualization library for modern web browsers. Here we can see information about the NFL players performance, points and salaries in a Daily Fantasy Sports (DFS) League in 2019.
-
-
-### Most Expensive Players and Average Points Per Position
-###
-![pie](https://user-images.githubusercontent.com/71770145/97742909-d0044480-1adc-11eb-9ae1-1172f9545db5.gif)
-
-### Points and Salary Relation
-###
-![points_salary](https://user-images.githubusercontent.com/71770145/97743465-9b44bd00-1add-11eb-839e-de9657d00510.gif)
-
-### Top 5
-###
-![top5](https://user-images.githubusercontent.com/71770145/97743503-aa2b6f80-1add-11eb-851f-7abf9301a812.gif)
-
-### Teams Completion
-###
-![teams_comp](https://user-images.githubusercontent.com/71770145/97743624-d5ae5a00-1add-11eb-9e7c-7a4bcda382ae.gif)
