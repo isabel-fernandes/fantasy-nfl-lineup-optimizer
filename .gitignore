@@ -13,3 +13,6 @@ env/*
 
 # Cache Files
 *__pycache__
+
+# Test Scripts
+test.jl
