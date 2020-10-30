@@ -82,7 +82,7 @@ class ModelRun():
                 estimator = regressor,
                 param_grid = globs.grid_params[model],
                 scoring="neg_mean_squared_error",
-                cv=TimeSeriesSplit(n_splits=5),
+                cv=TimeSeriesSplit(n_splits=5), # TODO: we can probably try this with a random split 
                 refit=True,
                 n_jobs=1
             )
