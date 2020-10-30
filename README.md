@@ -10,64 +10,13 @@ This project provides optimized fantasty football lineups for Daily Fantasy Spor
 - Lineup Optimizer
 - Display Dashboard
 
-## Getting Started
-- Install Anaconda: https://docs.anaconda.com/anaconda/install/
-- Install git
-- Clone repo: `git clone https://github.com/cshono/fantasy-nfl-lineup-optimizer`
-- Set up env: `conda env create --file environment.yml`
-- Activate to env: `conda activate dfs`
-- Fetch all remote branches: `git fetch origin`
-- When done working on project for the day, deactivate env: `conda deactivate` 
-
-### Git Workflow
-- Switch to your personal dev branch: `git checkout corey-dev`
-- Create some new files...
-- Stage changes: `git add .`
-- Commit changes to your local dev: `git commit -m "created some new files for new feature"`
-- Edit those file to complete feature...
-- Stage changes: `git add .`
-- Commit changes to local dev: `git commit -m "completed new feature"`
-- Merge changes to master:
-    - Switch to master: `git checkout master`
-    - Pull current version of master from remote: `git pull`
-    - Switch back to dev branch: `git checkout corey-dev`
-    - Merge dev branch with master: `git merge master`
-    - If there is merge conflict:
-        - Resolve conflicts
-        - `git add .` `git commit` `[esc]:wq`
-- Push merged dev branch to remote dev: `git push origin corey-dev`
-- Navigate to remote dev branch on GitHub repo
-- Create a pull request. Tag others to review pull requests. ESPECIALLY if you
-are not the owner of the project directory where modifications are being made.
-- Message relevant collabroator to review and "merge pull request" when changes
-are approved.
-
-### Pull Request Guidelines
-- Always use your personal dev branch or a new feature branch when working on new/updating code
-- Do not push changes to `remote/master` or `remote/<other person's-dev>` 
-- Create pull requests to merge new features with `remote/master`. Include the
-project component owner for pull request approval. Not a bad idea to tag someone else
-in pull requests where you are the owner of the updates, just for a second pair of eyes.
-    - `scraper/`: Oscar
-    - `projection_model/`: Corey
-    - `lineup_optimizer/`: Corey
-    - `dashboard/`: Isabel
-    - `data/`: Tag the whole team, do not approve your own pull request
-    - `meta_data/`: Tag the whole team, do not approve your own pull request
-
-### .gitignore
-Git is primarily used to track changes to actual code. Not data, or visualizations.
-Include these files in the .gitignore file. It is o.k. to keep small data or meta
-data files in the git repo.
-
 ## Data Scraper
 
 ### Sources
 - https://fantasydata.com/nfl/fantasy-football-leaders
-- http://rotoguru1.com/cgi-bin/fyday.pl 
-- https://fantasydata.com/nfl/dfs-projections/fanduel
+- http://rotoguru1.com/cgi-bin/fyday.pl
 
-### FanDuel Salaries (has data back to 2013)
+### FanDuel Salaries
 Found a existing project with a scraper for pulling weekly salary data (https://github.com/rjh336/ffb_metis) <br>
 Sample: `data/fanduel_salaries/fd_salaries_2019.csv`
 - Note that this sample csv does not exactly match with the definitions outlined in the variable definitions table below. Please follow the variable definitions when preparing the actual webscraper outputs.
@@ -98,7 +47,7 @@ Sample: `data/weekly_players/sample_weekly.csv`
 | Wk                    | Week of season                | Int       | 1-17               |
 | Opp                   | Opponent team's abbreviation  | String    | GB, CAR, NYG, ...  |
 | Year                  | Starting year of the season   | Int       |                    |
-| Status                | Injury Status of Player       | String    | Q, O, IR, 0        |
+| Status                | Injury Status of Player       | String    | Q, O, IR, ,<-n/a   |
 | TeamScore             | Player's team's score in game | Int       |                    |
 | OppScore              | Opponent team's score in game | Int       |                    |
 | PassingYds            | Passing yards                 | Int       |                    |
@@ -115,63 +64,40 @@ Sample: `data/weekly_players/sample_weekly.csv`
 | ReceivingTD           | Receiving touchdowns          | Int       |                    |
 | FL                    | Fumbles                       | Int       |                    |
 
-### FanDuel Projections and Salaries 
-NOTE: not preferred b/c only has data back to 2017 <br> 
-https://fantasydata.com/nfl/dfs-projections/fanduel
-| Parameter   | Description                              | Notes                     |
-|-------------|------------------------------------------|---------------------------|
-| Name        | Frist and Last name of player            | "Lamar Jackson"           |
-| Week        | Week of season                           | 1-17                      |
-| Opp         | Opponent team abbbreviation              | see list of team abbrev's |
-| OppRank     | Rank of opponent overall                 | 1-32                      |
-| OppPosRank  | Rank of opponent against player position | 1-32                      |
-| Proj        | FanDuel Projection                       |                           |
-| ProjPer1k   | FanDuel projection per $1K               |                           |
-| nProjOwners | Number of projected owners               |                           |
-| Salary      | Weekly salary ($)                        |                           |
-
-### Team Abbreviations
-(needs to be updated to 2020 team names and abbrevs) 
-| Name       | Abbreviation |
-|------------|--------------|
-| Cardinals  | ARI          |
-| Falcons    | ATL          |
-| Ravens     | BAL          |
-| Bills      | BUF          |
-| Panthers   | CAR          |
-| Bears      | CHI          |
-| Bengals    | CIN          |
-| Browns     | CLE          |
-| Cowboys    | DAL          |
-| Broncos    | DEN          |
-| Lions      | DET          |
-| Packers    | GB           |
-| Texans     | HOU          |
-| Colts      | IND          |
-| Jaguars    | JAX          |
-| Chiefs     | KC           |
-| Dolphins   | MIA          |
-| Vikings    | MIN          |
-| Patriots   | NE           |
-| Saints     | NO           |
-| Giants     | NYG          |
-| Jets       | NYJ          |
-| Raiders    | OAK          |
-| Eagles     | PHI          |
-| Steelers   | PIT          |
-| Chargers   | SD           |
-| 49ers      | SF           |
-| Seahawks   | SEA          |
-| Rams       | LA           |
-| Buccaneers | TB           |
-| Titans     | TEN          |
-| Redskins   | WAS          |
-
 ## Exploratory Analysis
 - Generate and explore features that are correlated with fantasy score
 - Generate a weekly predictive model of score for each postion. Let's do a combined model for QB, RB, WR
 
 ## Projection model
+### `PredictiveModel` class
+#### Attributes:
+- `X_vars`: list of predictor variables
+- `y_var`: name of target variable
+- `b_var`: name of benchmark variable
+- `df`: full dataset containing all players/years/weeks rows and all predictor/target/benchmard/meta columns.
+- `df_train`: training data subset for fitting model with cross-validation
+- `df_val`: validation data subset for selecting model class
+- `df_test`: test data subset for evaluating model performance against benchmark
+#### Methods:
+- `read_player_data()`
+- `read_opp_data()`
+- `calc_target()`
+- `create_nfl_features()`: wrapper for all of the featurzing helper functions
+    - `get_cumul_stats_time_weighted()`
+    - `get_cumul_mean_stats()`
+    - `get_trend()`
+    - `defensive_ptsallow()`
+    - `weekly_player_weights()`
+- `clean_salaries()`
+- `read_salaries_data()`
+- `merge_salaries()`
+- `add_year()`: This is included in pda.py because 'Year column got lost when I called create_nfl_features() on each dataframe, so I
+am adding it back.' This method might not be necessary, but I am keeping it for now and might remove once I have a working code and
+determine it is not needed.
+- `read_snapcounts_data()`
+- `merge_snapcounts()`
+- `read_weather_data()`
+- `merge_weather()`
 
 ## Lineup Optimizer
 

@@ -1,8 +1,18 @@
 # Large Data Files
 raw_data/*
+data/model_data/*
 
 # Desktop Service Store
 .DS_Store
 
 # Environment
 env/*
+
+# ipynb checkpoints
+*/.ipynb_checkpoints*
+
+# Cache Files
+*__pycache__
+
+# Test Scripts
+test.jl
