@@ -140,6 +140,7 @@ The model training, validation, and testing was carried out on NFL season 2013-2
     benchmarked comparison.
 
 ## Lineup Optimizer
+###`lineup_optimizer.jl` 
 The lineup optimizer is still a work-in-progress. However, the plan is to carry
 out an optimization on the predicted scores to select optimal player lineups
 for daily fantasy sports leagues. The optimization problem will be formulated as
@@ -158,7 +159,7 @@ a Markov Decision Process as follows:
 
 Because of the large state and action space, an explicit representation of the
 environment is not possible. Therefore, the optimal policy will be learned using
-a version of reinforcement learning. Probably Q-learning, similar to previous 
+a version of reinforcement learning. Probably Q-learning, similar to previous
 work carried out by [1].
 
 ## Display dashboard
