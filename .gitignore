@@ -9,7 +9,10 @@ data/model_data/*
 env/*
 
 # ipynb checkpoints
-~/.pynb_checkpoints/*
+*/.ipynb_checkpoints*
 
 # Cache Files
 *__pycache__
+
+# Test Scripts
+test.jl
